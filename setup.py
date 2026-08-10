@@ -7,6 +7,8 @@ import subprocess
 
 try:
     import cv2
+    import numpy as np
+    import keyboard
     from PIL import ImageGrab
 except ImportError:
     print("[!] Dependencies missing. Please run using uv:")
@@ -26,44 +28,100 @@ def ensure_assets_dir():
     if not os.path.exists(ASSETS_DIR):
         os.makedirs(ASSETS_DIR)
 
-def select_and_crop(window_title, prompt_msg, save_filename):
+def select_and_crop_one_click(window_title, prompt_msg, save_filename):
     print(f"\n[+] Step: {prompt_msg}")
-    print("    Taking a screenshot of your screen in 3 seconds... Switch to the Roblox window now if needed!")
-    for i in range(3, 0, -1):
-        print(f"    {i}...")
-        time.sleep(1)
+    print("    =======================================================")
+    print("    --> Switch to the Roblox window now.")
+    print("    --> Press [ F4 ] on your keyboard to take the screenshot!")
+    print("    =======================================================")
+    
+    while keyboard.is_pressed('f4'):
+        time.sleep(0.05)
+        
+    keyboard.wait('f4')
+    print("    [✓] F4 pressed! Capturing screen...")
+    time.sleep(0.2)
     
     screenshot = ImageGrab.grab()
     screenshot_path = os.path.join(ASSETS_DIR, "_temp_setup.png")
     screenshot.save(screenshot_path)
     
     img = cv2.imread(screenshot_path)
-    print("    -> Drag a bounding box over the target area using your mouse.")
-    print("    -> Press SPACE or ENTER to confirm the selection.")
-    print("    -> Press 'c' to cancel and re-try.")
-    
-    roi = cv2.selectROI(window_title, img, showCrosshair=True, fromCenter=False)
-    cv2.destroyAllWindows()
-    
-    x, y, w, h = [int(v) for v in roi]
-    
-    if w == 0 or h == 0:
-        print("[!] Selection canceled or invalid width/height. Please try again.")
+    if img is None:
+        print("[!] Selection canceled or image failed to load.")
         return None
+
+    h_img, w_img = img.shape[:2]
+    top_border = 50
+    display_img = cv2.copyMakeBorder(
+        img, top_border, 0, 0, 0,
+        cv2.BORDER_CONSTANT, value=[25, 25, 25]
+    )
     
-    # Save cropped image template
-    cropped = img[y:y+h, x:x+w]
+    instruction_line1 = f"1-CLICK TARGET: {prompt_msg}"
+    instruction_line2 = "LEFT-CLICK on the target element -> Press ENTER/SPACE to confirm | Press 'c' or ESC to retry"
+    
+    cv2.putText(display_img, instruction_line1, (15, 22), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2, cv2.LINE_AA)
+    cv2.putText(display_img, instruction_line2, (15, 42), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
+
+    click_point = {"x": None, "y": None}
+    canvas = display_img.copy()
+
+    def on_mouse(event, x, y, flags, param):
+        if event == cv2.EVENT_LBUTTONDOWN:
+            click_point["x"] = x
+            click_point["y"] = y
+            np.copyto(canvas, display_img)
+            cv2.circle(canvas, (x, y), 12, (0, 0, 255), 2)
+            cv2.line(canvas, (x - 20, y), (x + 20, y), (0, 255, 0), 2)
+            cv2.line(canvas, (x, y - 20), (x, y + 20), (0, 255, 0), 2)
+            cv2.imshow(window_title, canvas)
+
+    cv2.namedWindow(window_title, cv2.WINDOW_AUTOSIZE)
+    cv2.imshow(window_title, canvas)
+    cv2.setWindowProperty(window_title, cv2.WND_PROP_TOPMOST, 1)
+    cv2.setMouseCallback(window_title, on_mouse)
+
+    print(f"    -> LEFT-CLICK directly on '{prompt_msg}' on screen.")
+    print("    -> Press SPACE or ENTER to confirm the selection.")
+    
+    while True:
+        key = cv2.waitKey(50) & 0xFF
+        if key == 13 or key == 32:  # ENTER or SPACE
+            if click_point["x"] is not None:
+                break
+            else:
+                print("    [!] Please left-click on the screen target first!")
+        elif key == 27 or key == ord('c'):  # ESC or c
+            cv2.destroyAllWindows()
+            if os.path.exists(screenshot_path):
+                os.remove(screenshot_path)
+            return None
+
+    cv2.destroyAllWindows()
+
+    click_x = click_point["x"]
+    click_y = click_point["y"]
+
+    real_center_x = click_x
+    real_center_y = max(0, click_y - top_border)
+
+    crop_w, crop_h = 80, 40
+    x1 = max(0, real_center_x - (crop_w // 2))
+    y1 = max(0, real_center_y - (crop_h // 2))
+    x2 = min(w_img, x1 + crop_w)
+    y2 = min(h_img, y1 + crop_h)
+
+    cropped = img[y1:y2, x1:x2]
     target_path = os.path.join(ASSETS_DIR, save_filename)
     cv2.imwrite(target_path, cropped)
-    
-    center_x = x + (w // 2)
-    center_y = y + (h // 2)
-    print(f"    [Success] Saved '{save_filename}'! Center coordinate: ({center_x}, {center_y})")
-    
+
+    print(f"    [Success] Saved 1-Click coordinate ({real_center_x}, {real_center_y}) & template '{save_filename}'!")
+
     if os.path.exists(screenshot_path):
         os.remove(screenshot_path)
-        
-    return {"x": center_x, "y": center_y, "bbox": [x, y, w, h]}
+
+    return {"x": real_center_x, "y": real_center_y, "bbox": [x1, y1, x2 - x1, y2 - y1]}
 
 def main():
     print("======================================================")
@@ -123,30 +181,116 @@ def main():
     place_id = config.get("roblox_place_id", "1730877806")
     print(f"\n[Action] Launching Grand Piece Online (Place ID: {place_id}) via roblox:// protocol to load main menu...")
     os.startfile(f"roblox://placeId={place_id}")
-    print("Waiting 12 seconds for Roblox to launch...")
-    time.sleep(12)
+    print("    Waiting for Roblox to open and GPO to load into the Main Menu...")
+    input("\n[!] Press ENTER once GPO has fully loaded and the Main Menu is visible on your screen... ")
 
-    # Capture 1: PS Box
-    ps_res = select_and_crop("1. Crop GPO PS Code Input Box", "Select the Private Server Code text input box", "ps_box.png")
-    if ps_res:
+    def capture_with_retry(window_title, prompt_msg, save_filename, coord_key):
+        target_path = os.path.join(ASSETS_DIR, save_filename)
+        if os.path.exists(target_path):
+            print(f"\n[✓] Existing template image found: 'assets/{save_filename}'")
+            skip = input(f"    Keep existing template and skip capturing '{save_filename}'? (y/n) [y]: ").strip().lower()
+            if skip != 'n':
+                print(f"    [Skipped] Preserved existing '{save_filename}'.")
+                existing_coord = config.get("coords", {}).get(coord_key)
+                if existing_coord:
+                    return existing_coord
+                img = cv2.imread(target_path)
+                if img is not None:
+                    h, w = img.shape[:2]
+                    return {"x": w // 2, "y": h // 2, "bbox": [0, 0, w, h]}
+                return True
+
+        while True:
+            res = select_and_crop_one_click(window_title, prompt_msg, save_filename)
+            if res is not None:
+                return res
+            retry = input("  [?] Selection was canceled or invalid. Retry this step? (y/n) [y]: ").strip().lower()
+            if retry == 'n':
+                return None
+
+    # Step 1: Main Menu Private Server Button
+    ps_btn_res = capture_with_retry(
+        "1. Select GPO Main Menu PS Button",
+        "Select the 'Private Server' button on the Main Menu",
+        "ps_button.png",
+        "ps_button"
+    )
+    if ps_btn_res and ps_btn_res is not True:
+        config["coords"]["ps_button"] = ps_btn_res
+
+    # Transition 1 -> 2: Open Private Server Page
+    print("\n-----------------------------------------------------------------------")
+    print(" [Action Required]")
+    print(" 1. Click the 'Private Server' button in GPO to open the Private Server page.")
+    print(" 2. Wait for the Private Server Code input box to appear on screen.")
+    print("-----------------------------------------------------------------------")
+    input("Press ENTER once the Private Server Code input box is visible on screen... ")
+
+    # Step 2: Private Server Code Input Box (on PS Page)
+    ps_res = capture_with_retry(
+        "2. Select GPO PS Code Input Box",
+        "Select the Private Server Code text input box (on the PS page)",
+        "ps_box.png",
+        "ps_box"
+    )
+    if ps_res and ps_res is not True:
         config["coords"]["ps_box"] = ps_res
 
-    # Capture 2: Regular Mode Button
-    reg_res = select_and_crop("2. Crop 'Regular' Mode Button", "Select the 'Regular' game mode button", "regular_button.png")
-    if reg_res:
+    # Transition 2 -> 3: Enter PS Code & Open Game Mode Menu
+    ps_code_val = config.get('gpo_ps_code', '')
+    print("\n-----------------------------------------------------------------------")
+    print(" [Action Required]")
+    print(" 1. Click inside the Private Server Code text box in GPO to select it.")
+    print(f" 2. Type/paste your Private Server Code: '{ps_code_val}' & press ENTER.")
+    print(" 3. Wait for GPO to open the Mode Selection screen (showing 'Regular').")
+    print("-----------------------------------------------------------------------")
+    input("Press ENTER once the 'Regular' game mode button is visible on your screen... ")
+
+    # Step 3: Regular Mode Button
+    reg_res = capture_with_retry(
+        "3. Select 'Regular' Mode Button",
+        "Select the 'Regular' game mode button",
+        "regular_button.png",
+        "regular_button"
+    )
+    if reg_res and reg_res is not True:
         config["coords"]["regular_button"] = reg_res
 
-    # Capture 3: First Sea Button
-    sea_res = select_and_crop("3. Crop 'First Sea' Button", "Select the 'First Sea' button", "first_sea.png")
-    if sea_res:
+    # Transition 3 -> 4: Select Game Mode
+    print("\n-----------------------------------------------------------------------")
+    print(" [Action Required]")
+    print(" 1. Click the 'Regular' game mode button in GPO.")
+    print(" 2. Wait for GPO to open the Sea Selection screen (showing 'First Sea').")
+    print("-----------------------------------------------------------------------")
+    input("Press ENTER once the 'First Sea' button is visible on your screen... ")
+
+    # Step 4: First Sea Button
+    sea_res = capture_with_retry(
+        "4. Select 'First Sea' Button",
+        "Select the 'First Sea' button",
+        "first_sea.png",
+        "first_sea_button"
+    )
+    if sea_res and sea_res is not True:
         config["coords"]["first_sea_button"] = sea_res
 
-    # Capture 4: Bottom-Right Server Time HUD
-    print("\n[Action] Please click into GPO First Sea game server now to display the bottom-right server clock!")
-    input("Press ENTER once you are spawned into the First Sea world and see the bottom-right server time... ")
-    
-    hud_res = select_and_crop("4. Crop Bottom-Right Server Time Clock", "Select the Server Time indicator in the bottom-right corner", "server_time.png")
-    if hud_res:
+    # Transition 4 -> 5: Join Game World
+    print("\n-----------------------------------------------------------------------")
+    print(" [Action Required]")
+    print(" 1. Click the 'First Sea' button in GPO.")
+    print(" 2. Wait for your character to spawn into the First Sea world.")
+    print(" 3. Look at the bottom-right corner for the Server Time HUD clock.")
+    print("-----------------------------------------------------------------------")
+    input("Press ENTER once you are spawned into the First Sea world and see the bottom-right clock... ")
+
+    # Step 5: Bottom-Right Server Time HUD
+    hud_res = capture_with_retry(
+        "5. Select Bottom-Right Server Time Clock",
+        "Select the Server Time indicator in the bottom-right corner",
+        "server_time.png",
+        "server_time"
+    )
+    if hud_res and hud_res is not True:
         config["coords"]["server_time"] = hud_res
 
     # Save to config.json

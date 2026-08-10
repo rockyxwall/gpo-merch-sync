@@ -189,8 +189,20 @@ def run_ps_join_workflow(config):
     print("[Action] Launching Roblox GPO via roblox:// protocol...")
     os.startfile(f"roblox://placeId={place_id}")
 
-    # 3. Dynamic Wait for PS Input Box
-    print("[System] Waiting for main menu PS Code box (assets/ps_box.png)...")
+    # 3. Dynamic Wait for Main Menu PS Button (if present/configured)
+    print("[System] Checking for Private Server Main Menu button (assets/ps_button.png)...")
+    ps_btn_pos = find_image_on_screen("ps_button.png", confidence=config.get("confidence", 0.8), timeout=15)
+    if not ps_btn_pos and coords.get("ps_button"):
+        ps_btn_pos = (coords["ps_button"]["x"], coords["ps_button"]["y"])
+
+    if ps_btn_pos:
+        focus_roblox_window()
+        print(f"[Action] DirectInput Clicking Main Menu PS Button at {ps_btn_pos}...")
+        pydirectinput.click(ps_btn_pos[0], ps_btn_pos[1])
+        time.sleep(1.5)
+
+    # 4. Dynamic Wait for PS Code Box (on PS Page)
+    print("[System] Waiting for PS Code box (assets/ps_box.png)...")
     ps_pos = find_image_on_screen("ps_box.png", confidence=config.get("confidence", 0.8), timeout=90)
     
     if not ps_pos and coords.get("ps_box"):
@@ -201,7 +213,7 @@ def run_ps_join_workflow(config):
         return False
 
     focus_roblox_window()
-    print(f"[Action] DirectInput Clicking PS Box at {ps_pos}...")
+    print(f"[Action] DirectInput Clicking PS Code Box at {ps_pos}...")
     pydirectinput.click(ps_pos[0], ps_pos[1])
     time.sleep(0.5)
     
