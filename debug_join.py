@@ -179,18 +179,12 @@ def run_debug():
     print(f"  - Place ID: {place_id}")
     print(f"  - Coordinates: {coords}\n")
 
-    step_by_step = input("Run in step-by-step interactive mode (pause at each click)? (y/n) [y]: ").strip().lower() != 'n'
-
-    def pause_step(step_name):
-        if step_by_step:
-            input(f"\n[NEXT STEP: {step_name}] Press ENTER to execute...")
-
     # Step 1: Switch Desktop
-    pause_step("Switch to AFK Virtual Desktop")
+    print("\n--- [Step 1] Switch Desktop ---")
     switch_to_desktop_num(afk_desktop)
 
     # Step 2: Cleanup & Launch
-    pause_step("Kill Roblox & Launch roblox://")
+    print("\n--- [Step 2] Kill Roblox & Launch roblox:// ---")
     force_kill_roblox()
     time.sleep(1.5)
     
@@ -198,7 +192,7 @@ def run_debug():
     os.startfile(f"roblox://placeId={place_id}")
 
     # Step 3: Wait & Focus Window
-    pause_step("Wait for Roblox window & Focus")
+    print("\n--- [Step 3] Wait for Roblox & Focus ---")
     print("  [System] Polling for Roblox window (max 15s)...")
     focused = False
     for i in range(15):
@@ -211,25 +205,17 @@ def run_debug():
     if not focused:
         print("  [!] Failed to focus Roblox window after 15 seconds.")
 
-    time.sleep(2.0)
+    time.sleep(3.0)
 
-    # Step 4: Test Keypresses to dismiss splash
-    pause_step("Test Keypress (f / space / enter) to dismiss splash screen")
+    # Step 4: Keypress to dismiss splash
+    print("\n--- [Step 4] Keypress to dismiss splash screen ---")
     focus_roblox_window()
     print("  [Action] Sending keypress 'f'...")
     pydirectinput.press('f')
-    time.sleep(1.0)
-    
-    print("  [Action] Sending keypress 'space'...")
-    pydirectinput.press('space')
-    time.sleep(1.0)
-
-    print("  [Action] Sending keypress 'enter'...")
-    pydirectinput.press('enter')
-    time.sleep(2.0)
+    time.sleep(2.5)
 
     # Step 5: PS Button
-    pause_step("Click Main Menu Private Server Button")
+    print("\n--- [Step 5] Click Main Menu PS Button ---")
     focus_roblox_window()
     ps_btn_pos = None
     if coords.get("ps_button") and isinstance(coords["ps_button"], dict):
@@ -242,11 +228,12 @@ def run_debug():
         focus_roblox_window()
         print(f"  [Action] pydirectinput.click({ps_btn_pos[0]}, {ps_btn_pos[1]})...")
         pydirectinput.click(ps_btn_pos[0], ps_btn_pos[1])
+        time.sleep(1.5)
     else:
         print("  [!] No coordinates or template found for Main Menu PS Button!")
 
     # Step 6: PS Box
-    pause_step("Click PS Code Box & Paste PS Code")
+    print("\n--- [Step 6] Click PS Box & Paste PS Code ---")
     focus_roblox_window()
     ps_pos = None
     if coords.get("ps_box") and isinstance(coords["ps_box"], dict):
@@ -263,11 +250,12 @@ def run_debug():
         enter_ps_code(ps_code)
         print("  [Action] Pressing Enter...")
         pydirectinput.press('enter')
+        time.sleep(2.5)
     else:
         print("  [!] No coordinates or template found for PS Box!")
 
     # Step 7: Regular Button
-    pause_step("Click 'Regular' Game Mode Button")
+    print("\n--- [Step 7] Click 'Regular' Button ---")
     focus_roblox_window()
     reg_pos = None
     if coords.get("regular_button") and isinstance(coords["regular_button"], dict):
@@ -280,11 +268,12 @@ def run_debug():
         focus_roblox_window()
         print(f"  [Action] pydirectinput.click({reg_pos[0]}, {reg_pos[1]})...")
         pydirectinput.click(reg_pos[0], reg_pos[1])
+        time.sleep(2.0)
     else:
         print("  [!] No coordinates or template found for Regular Button!")
 
     # Step 8: First Sea Button
-    pause_step("Click 'First Sea' Button")
+    print("\n--- [Step 8] Click 'First Sea' Button ---")
     focus_roblox_window()
     sea_pos = None
     if coords.get("first_sea_button") and isinstance(coords["first_sea_button"], dict):
