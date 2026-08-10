@@ -68,15 +68,24 @@ def send_toast(title, message):
 
 def get_current_desktop_num():
     try:
-        return pyvda.get_current_desktop().number
+        if hasattr(pyvda, "get_current_desktop"):
+            return pyvda.get_current_desktop().number
+        elif hasattr(pyvda, "VirtualDesktop"):
+            return pyvda.VirtualDesktop.current().number
     except Exception:
-        return 1
+        pass
+    return 1
 
 def switch_to_desktop_num(num):
     try:
-        desktops = pyvda.get_desktops()
+        desktops = []
+        if hasattr(pyvda, "get_virtual_desktops"):
+            desktops = pyvda.get_virtual_desktops()
+        elif hasattr(pyvda, "get_desktops"):
+            desktops = pyvda.get_desktops()
+            
         for d in desktops:
-            if d.number == num:
+            if getattr(d, "number", None) == num:
                 d.switch()
                 time.sleep(0.5)
                 return True
@@ -188,12 +197,15 @@ def run_ps_join_workflow(config):
     # 2. Browserless Launch via roblox://
     print("[Action] Launching Roblox GPO via roblox:// protocol...")
     os.startfile(f"roblox://placeId={place_id}")
+    time.sleep(4.0)
 
-    # 3. Dynamic Wait for Main Menu PS Button (if present/configured)
-    print("[System] Checking for Private Server Main Menu button (assets/ps_button.png)...")
-    ps_btn_pos = find_image_on_screen("ps_button.png", confidence=config.get("confidence", 0.8), timeout=15)
-    if not ps_btn_pos and coords.get("ps_button"):
+    # 3. Main Menu PS Button
+    print("[System] Clicking Main Menu Private Server button...")
+    ps_btn_pos = None
+    if coords.get("ps_button") and isinstance(coords["ps_button"], dict):
         ps_btn_pos = (coords["ps_button"]["x"], coords["ps_button"]["y"])
+    else:
+        ps_btn_pos = find_image_on_screen("ps_button.png", confidence=config.get("confidence", 0.8), timeout=15)
 
     if ps_btn_pos:
         focus_roblox_window()
@@ -201,45 +213,45 @@ def run_ps_join_workflow(config):
         pydirectinput.click(ps_btn_pos[0], ps_btn_pos[1])
         time.sleep(1.5)
 
-    # 4. Dynamic Wait for PS Code Box (on PS Page)
-    print("[System] Waiting for PS Code box (assets/ps_box.png)...")
-    ps_pos = find_image_on_screen("ps_box.png", confidence=config.get("confidence", 0.8), timeout=90)
-    
-    if not ps_pos and coords.get("ps_box"):
+    # 4. PS Code Box
+    print("[System] Clicking PS Code text input box...")
+    ps_pos = None
+    if coords.get("ps_box") and isinstance(coords["ps_box"], dict):
         ps_pos = (coords["ps_box"]["x"], coords["ps_box"]["y"])
+    else:
+        ps_pos = find_image_on_screen("ps_box.png", confidence=config.get("confidence", 0.8), timeout=30)
+
+    if ps_pos:
+        focus_roblox_window()
+        print(f"[Action] DirectInput Clicking PS Code Box at {ps_pos}...")
+        pydirectinput.click(ps_pos[0], ps_pos[1])
+        time.sleep(0.5)
         
-    if not ps_pos:
-        print("[!] Timeout waiting for PS Code box. Retrying cycle...")
-        return False
+        print("[Action] Pasting PS Code...")
+        enter_ps_code(ps_code)
+        pydirectinput.press('enter')
+        time.sleep(2.5)
 
-    focus_roblox_window()
-    print(f"[Action] DirectInput Clicking PS Code Box at {ps_pos}...")
-    pydirectinput.click(ps_pos[0], ps_pos[1])
-    time.sleep(0.5)
-    
-    print("[Action] Pasting PS Code...")
-    enter_ps_code(ps_code)
-    pydirectinput.press('enter')
-    time.sleep(2.0)
-
-    # 4. Mode Selection: Regular Button
-    print("[System] Waiting for 'Regular' mode button (assets/regular_button.png)...")
-    reg_pos = find_image_on_screen("regular_button.png", confidence=config.get("confidence", 0.8), timeout=90)
-    
-    if not reg_pos and coords.get("regular_button"):
+    # 5. Regular Button
+    print("[System] Clicking 'Regular' game mode button...")
+    reg_pos = None
+    if coords.get("regular_button") and isinstance(coords["regular_button"], dict):
         reg_pos = (coords["regular_button"]["x"], coords["regular_button"]["y"])
+    else:
+        reg_pos = find_image_on_screen("regular_button.png", confidence=config.get("confidence", 0.8), timeout=30)
 
     if reg_pos:
         print(f"[Action] DirectInput Clicking 'Regular' button at {reg_pos}...")
         pydirectinput.click(reg_pos[0], reg_pos[1])
         time.sleep(2.0)
 
-    # 5. Sea Selection: First Sea Button
-    print("[System] Waiting for 'First Sea' button (assets/first_sea.png)...")
-    sea_pos = find_image_on_screen("first_sea.png", confidence=config.get("confidence", 0.8), timeout=90)
-    
-    if not sea_pos and coords.get("first_sea_button"):
+    # 6. First Sea Button
+    print("[System] Clicking 'First Sea' button...")
+    sea_pos = None
+    if coords.get("first_sea_button") and isinstance(coords["first_sea_button"], dict):
         sea_pos = (coords["first_sea_button"]["x"], coords["first_sea_button"]["y"])
+    else:
+        sea_pos = find_image_on_screen("first_sea.png", confidence=config.get("confidence", 0.8), timeout=30)
 
     if sea_pos:
         print(f"[Action] DirectInput Clicking 'First Sea' button at {sea_pos}...")
@@ -248,8 +260,20 @@ def run_ps_join_workflow(config):
     print(" [✓] Server join sequence completed!")
     return True
 
-def get_countdown_input():
+def get_countdown_input(config):
     print("\n------------------------------------------------------")
+    print(" [Global Stock Refresh Calibration]")
+
+    # Check if config has calibrated_refresh_timestamp
+    calibrated_ts = config.get("calibrated_refresh_timestamp", 0)
+    if calibrated_ts > time.time():
+        seconds_left = calibrated_ts - time.time()
+        refresh_str = datetime.datetime.fromtimestamp(calibrated_ts).strftime('%I:%M:%S %p')
+        print(f" Saved Calibration Found: Next Refresh at {refresh_str}")
+        use_saved = input(" Use saved calibration from setup.py? (y/n) [y]: ").strip().lower()
+        if use_saved != 'n':
+            return seconds_left
+
     print(" Look at the Discord Stock Tracker bot.")
     try:
         minutes = int(input(" Enter remaining MINUTES until Global Stock Refresh: "))
@@ -290,7 +314,7 @@ def main():
     afk_desktop_num = config.get("afk_desktop_index", 2)
     setup_hotkeys(afk_desktop_num)
 
-    wiki_seconds_left = get_countdown_input()
+    wiki_seconds_left = get_countdown_input(config)
     
     current_time = time.time()
     next_refresh_time = current_time + wiki_seconds_left
@@ -310,15 +334,26 @@ def main():
             next_refresh_time += refresh_cycle_seconds
             launch_time = next_refresh_time - join_offset_seconds
 
-        wait_time = launch_time - current_time
         CURRENT_MAIN_DESKTOP = get_current_desktop_num()
         launch_str = datetime.datetime.fromtimestamp(launch_time).strftime('%I:%M:%S %p')
+        refresh_str = datetime.datetime.fromtimestamp(next_refresh_time).strftime('%I:%M:%S %p')
 
-        print(f"\n[Timer] Waiting {int(wait_time//60)}m {int(wait_time%60)}s on Desktop #{CURRENT_MAIN_DESKTOP}.")
-        print(f"[Timer] Roblox AFK join will trigger at exactly {launch_str}.")
+        print(f"\n[Timer] Next Global Stock Refresh at: {refresh_str}")
+        print(f"[Timer] Roblox AFK join will trigger at: {launch_str}")
+        print(f"[Timer] Waiting on Desktop #{CURRENT_MAIN_DESKTOP} for AFK trigger...")
 
-        # Sleep on main study desktop
-        time.sleep(max(1, wait_time))
+        while time.time() < launch_time and not EMERGENCY_STOP:
+            now = time.time()
+            remaining = launch_time - now
+            mins = int(max(0, remaining) // 60)
+            secs = int(max(0, remaining) % 60)
+            total_secs = int(max(0, remaining))
+
+            sys.stdout.write(f"\r[Timer Countdown] {mins}m {secs}s remaining ({total_secs}s) until AFK join...   ")
+            sys.stdout.flush()
+            time.sleep(1)
+
+        print("")
 
         if EMERGENCY_STOP:
             break
