@@ -253,18 +253,20 @@ def run_debug():
     if EMERGENCY_STOP:
         return
 
-    # Step 5: PS Button
-    print("\n--- [Step 5] Click Main Menu PS Button ---")
+    # Step 5: PS Button (Image Recognition for Main Menu Screen)
+    print("\n--- [Step 5] Detect Main Menu & Click PS Button ---")
     if not focus_roblox_window(maximize=True):
         print("[!] Roblox window lost before PS Button click. Aborting.")
         return
         
-    ps_btn_pos = None
-    if coords.get("ps_button") and isinstance(coords["ps_button"], dict):
+    print("  [System] Using OpenCV image recognition to detect Main Menu ('ps_button.png')...")
+    ps_btn_pos = find_image_on_screen("ps_button.png", confidence=0.7, timeout=20)
+    
+    if ps_btn_pos:
+        print(f"  [✓ Image Rec] Detected Main Menu PS Button at {ps_btn_pos}")
+    elif coords.get("ps_button") and isinstance(coords["ps_button"], dict):
         ps_btn_pos = (coords["ps_button"]["x"], coords["ps_button"]["y"])
-        print(f"  [Config Coords] Main Menu PS Button: {ps_btn_pos}")
-    else:
-        ps_btn_pos = find_image_on_screen("ps_button.png", timeout=5)
+        print(f"  [Fallback Coords] Using saved coordinate for PS Button: {ps_btn_pos}")
 
     if ps_btn_pos:
         focus_roblox_window(maximize=True)
@@ -272,24 +274,23 @@ def run_debug():
         pydirectinput.click(ps_btn_pos[0], ps_btn_pos[1])
         time.sleep(2.0)
     else:
-        print("  [!] No coordinates or template found for Main Menu PS Button! Aborting.")
+        print("  [!] No template image or coordinates found for Main Menu PS Button! Aborting.")
         return
 
     if EMERGENCY_STOP:
         return
 
     # Step 6: PS Box
-    print("\n--- [Step 6] Click PS Box & Paste PS Code ---")
+    print("\n--- [Step 6] Detect PS Box & Paste PS Code ---")
     if not focus_roblox_window(maximize=True):
         print("[!] Roblox window lost before PS Box click. Aborting.")
         return
         
-    ps_pos = None
-    if coords.get("ps_box") and isinstance(coords["ps_box"], dict):
+    print("  [System] Using image recognition to detect PS Box ('ps_box.png')...")
+    ps_pos = find_image_on_screen("ps_box.png", confidence=0.7, timeout=10)
+    if not ps_pos and coords.get("ps_box") and isinstance(coords["ps_box"], dict):
         ps_pos = (coords["ps_box"]["x"], coords["ps_box"]["y"])
-        print(f"  [Config Coords] PS Box: {ps_pos}")
-    else:
-        ps_pos = find_image_on_screen("ps_box.png", timeout=5)
+        print(f"  [Fallback Coords] Using saved coordinate for PS Box: {ps_pos}")
 
     if ps_pos:
         focus_roblox_window(maximize=True)
@@ -301,24 +302,23 @@ def run_debug():
         pydirectinput.press('enter')
         time.sleep(3.0)
     else:
-        print("  [!] No coordinates or template found for PS Box! Aborting.")
+        print("  [!] No template image or coordinates found for PS Box! Aborting.")
         return
 
     if EMERGENCY_STOP:
         return
 
     # Step 7: Regular Button
-    print("\n--- [Step 7] Click 'Regular' Button ---")
+    print("\n--- [Step 7] Detect 'Regular' Button ---")
     if not focus_roblox_window(maximize=True):
         print("[!] Roblox window lost before Regular Button click. Aborting.")
         return
         
-    reg_pos = None
-    if coords.get("regular_button") and isinstance(coords["regular_button"], dict):
+    print("  [System] Using image recognition to detect 'Regular' Mode Button...")
+    reg_pos = find_image_on_screen("regular_button.png", confidence=0.7, timeout=10)
+    if not reg_pos and coords.get("regular_button") and isinstance(coords["regular_button"], dict):
         reg_pos = (coords["regular_button"]["x"], coords["regular_button"]["y"])
-        print(f"  [Config Coords] Regular Button: {reg_pos}")
-    else:
-        reg_pos = find_image_on_screen("regular_button.png", timeout=5)
+        print(f"  [Fallback Coords] Using saved coordinate for Regular Button: {reg_pos}")
 
     if reg_pos:
         focus_roblox_window(maximize=True)
@@ -326,31 +326,32 @@ def run_debug():
         pydirectinput.click(reg_pos[0], reg_pos[1])
         time.sleep(2.5)
     else:
-        print("  [!] No coordinates or template found for Regular Button! Aborting.")
+        print("  [!] No template image or coordinates found for Regular Button! Aborting.")
         return
 
     if EMERGENCY_STOP:
         return
 
     # Step 8: First Sea Button
-    print("\n--- [Step 8] Click 'First Sea' Button ---")
+    print("\n--- [Step 8] Detect 'First Sea' Button ---")
     if not focus_roblox_window(maximize=True):
         print("[!] Roblox window lost before First Sea Button click. Aborting.")
         return
         
-    sea_pos = None
-    if coords.get("first_sea_button") and isinstance(coords["first_sea_button"], dict):
+    print("  [System] Using image recognition to detect 'First Sea' Button...")
+    sea_pos = find_image_on_screen("first_sea_button.png", confidence=0.7, timeout=10)
+    if not sea_pos:
+        sea_pos = find_image_on_screen("first_sea.png", confidence=0.7, timeout=5)
+    if not sea_pos and coords.get("first_sea_button") and isinstance(coords["first_sea_button"], dict):
         sea_pos = (coords["first_sea_button"]["x"], coords["first_sea_button"]["y"])
-        print(f"  [Config Coords] First Sea Button: {sea_pos}")
-    else:
-        sea_pos = find_image_on_screen("first_sea.png", timeout=5)
+        print(f"  [Fallback Coords] Using saved coordinate for First Sea Button: {sea_pos}")
 
     if sea_pos:
         focus_roblox_window(maximize=True)
         print(f"  [Action] pydirectinput.click({sea_pos[0]}, {sea_pos[1]})...")
         pydirectinput.click(sea_pos[0], sea_pos[1])
     else:
-        print("  [!] No coordinates or template found for First Sea Button!")
+        print("  [!] No template image or coordinates found for First Sea Button!")
 
     print("\n======================================================")
     print(" [✓] Debug Join Sequence Finished!")

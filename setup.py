@@ -8,12 +8,14 @@ import datetime
 try:
     import keyboard
     import pydirectinput
+    from PIL import ImageGrab
 except ImportError:
     print("[!] Dependencies missing. Please run using uv:")
     print("    uv run python setup.py")
     sys.exit(1)
 
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "config.json")
+ASSETS_DIR = os.path.join(os.path.dirname(__file__), "assets")
 
 def is_admin():
     try:
@@ -35,25 +37,44 @@ def get_mouse_position():
 def capture_coordinate_fast(step_num, title, coord_key, existing_coords):
     print(f"\n=======================================================")
     print(f" [Step {step_num}] {title}")
-    print(f"  1. Switch to/hover over the '{title}' in Roblox.")
-    print(f"  2. Press [ F4 ] or hit ENTER in terminal to record coordinates.")
+    print(f"  1. Switch to/hover mouse over '{title}' in Roblox.")
+    print(f"  2. Press [ F4 ] to record position & capture template image.")
     print(f"=======================================================")
 
     current_coord = existing_coords.get(coord_key)
-    if current_coord and isinstance(current_coord, dict) and "x" in current_coord and "y" in current_coord:
+    template_path = os.path.join(ASSETS_DIR, f"{coord_key}.png")
+
+    if current_coord and isinstance(current_coord, dict) and "x" in current_coord and "y" in current_coord and os.path.exists(template_path):
         print(f"  Existing coordinate: ({current_coord['x']}, {current_coord['y']})")
-        skip = input(f"  Keep existing coordinate for '{coord_key}'? (y/n) [y]: ").strip().lower()
+        print(f"  Existing image template: assets/{coord_key}.png")
+        skip = input(f"  Keep existing configuration for '{coord_key}'? (y/n) [y]: ").strip().lower()
         if skip != 'n':
-            print(f"  [✓] Preserved ({current_coord['x']}, {current_coord['y']})")
+            print(f"  [✓] Preserved ({current_coord['x']}, {current_coord['y']}) & assets/{coord_key}.png")
             return current_coord
 
     while keyboard.is_pressed('f4'):
         time.sleep(0.05)
 
-    print("  Waiting for [ F4 ] keypress or ENTER...")
+    print("  Waiting for [ F4 ] keypress...")
     while True:
         if keyboard.is_pressed('f4'):
             x, y = get_mouse_position()
+            
+            # Crop 120x60 ROI around mouse position for OpenCV template matching
+            try:
+                screen = ImageGrab.grab()
+                left = max(0, x - 60)
+                top = max(0, y - 30)
+                right = min(screen.width, x + 60)
+                bottom = min(screen.height, y + 30)
+                
+                crop_img = screen.crop((left, top, right, bottom))
+                os.makedirs(ASSETS_DIR, exist_ok=True)
+                crop_img.save(template_path)
+                print(f"  [✓] Saved image recognition template: assets/{coord_key}.png")
+            except Exception as e:
+                print(f"  [!] Warning saving template image: {e}")
+
             print(f"  [✓] F4 Pressed! Recorded coordinate: ({x}, {y})")
             time.sleep(0.3)
             return {"x": x, "y": y}
