@@ -147,8 +147,7 @@ def main():
             "ps_button": None,
             "ps_box": None,
             "regular_button": None,
-            "first_sea_button": None,
-            "server_time": None
+            "first_sea_button": None
         }
     }
     
@@ -279,25 +278,6 @@ def main():
     )
     if sea_res and sea_res is not True:
         config["coords"]["first_sea_button"] = sea_res
-
-    # Transition 4 -> 5: Join Game World
-    print("\n-----------------------------------------------------------------------")
-    print(" [Action Required]")
-    print(" 1. Click the 'First Sea' button in GPO.")
-    print(" 2. Wait for your character to spawn into the First Sea world.")
-    print(" 3. Look at the bottom-right corner for the Server Time HUD clock.")
-    print("-----------------------------------------------------------------------")
-    input("Press ENTER once you are spawned into the First Sea world and see the bottom-right clock... ")
-
-    # Step 5: Bottom-Right Server Time HUD
-    hud_res = capture_with_retry(
-        "5. Select Bottom-Right Server Time Clock",
-        "Select the Server Time indicator in the bottom-right corner",
-        "server_time.png",
-        "server_time"
-    )
-    if hud_res and hud_res is not True:
-        config["coords"]["server_time"] = hud_res
 
     # Save to config.json
     with open(CONFIG_PATH, "w") as f:

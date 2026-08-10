@@ -245,15 +245,7 @@ def run_ps_join_workflow(config):
         print(f"[Action] DirectInput Clicking 'First Sea' button at {sea_pos}...")
         pydirectinput.click(sea_pos[0], sea_pos[1])
 
-    # 6. Server HUD Verification (Bottom-Right Clock)
-    print("[System] Waiting for server spawn HUD clock (assets/server_time.png)...")
-    hud_pos = find_image_on_screen("server_time.png", confidence=0.7, timeout=120)
-    
-    if not hud_pos:
-        print("[!] HUD clock not detected within 120s, but proceeding with spawn buffer...")
-    else:
-        print(" [✓] In-Game Server Spawn Verified!")
-
+    print(" [✓] Server join sequence completed!")
     return True
 
 def get_countdown_input():
