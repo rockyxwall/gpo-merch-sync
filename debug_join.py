@@ -195,6 +195,13 @@ def enter_ps_code(code):
     pydirectinput.keyUp('ctrl')
     time.sleep(0.3)
 
+def real_mouse_click(x, y, hover_pause=0.3):
+    """Moves physical cursor to (x, y), hovers to trigger UI hover state, then clicks."""
+    pydirectinput.moveTo(int(x), int(y))
+    time.sleep(hover_pause)
+    pydirectinput.click(int(x), int(y))
+    time.sleep(0.2)
+
 def run_debug():
     print("======================================================")
     print("   GPO Merch Sync - Standalone Join Debug Script 🧪   ")
@@ -278,8 +285,8 @@ def run_debug():
     if ps_btn_pos:
         print(f"  [✓ Image Recognized] Found Main Menu PS Button at {ps_btn_pos}")
         focus_roblox_window(maximize=True)
-        print(f"  [Action] pydirectinput.click({ps_btn_pos[0]}, {ps_btn_pos[1]})...")
-        pydirectinput.click(ps_btn_pos[0], ps_btn_pos[1])
+        print(f"  [Action] Hovering & Clicking PS Button at {ps_btn_pos}...")
+        real_mouse_click(ps_btn_pos[0], ps_btn_pos[1], hover_pause=0.3)
         time.sleep(2.0)
     else:
         print("  [!] ERROR: Image recognition failed for 'assets/ps_button.png'. Please re-run setup.py!")
@@ -300,8 +307,8 @@ def run_debug():
     if ps_pos:
         print(f"  [✓ Image Recognized] Found PS Box at {ps_pos}")
         focus_roblox_window(maximize=True)
-        print(f"  [Action] pydirectinput.click({ps_pos[0]}, {ps_pos[1]})...")
-        pydirectinput.click(ps_pos[0], ps_pos[1])
+        print(f"  [Action] Hovering & Clicking PS Code Box at {ps_pos}...")
+        real_mouse_click(ps_pos[0], ps_pos[1], hover_pause=0.3)
         time.sleep(0.5)
         enter_ps_code(ps_code)
         print("  [Action] Pressing Enter...")
@@ -326,8 +333,8 @@ def run_debug():
     if reg_pos:
         print(f"  [✓ Image Recognized] Found Regular Button at {reg_pos}")
         focus_roblox_window(maximize=True)
-        print(f"  [Action] pydirectinput.click({reg_pos[0]}, {reg_pos[1]})...")
-        pydirectinput.click(reg_pos[0], reg_pos[1])
+        print(f"  [Action] Hovering & Clicking 'Regular' Button at {reg_pos}...")
+        real_mouse_click(reg_pos[0], reg_pos[1], hover_pause=0.3)
         time.sleep(2.5)
     else:
         print("  [!] ERROR: Image recognition failed for 'assets/regular_button.png'. Please re-run setup.py!")
@@ -350,8 +357,8 @@ def run_debug():
     if sea_pos:
         print(f"  [✓ Image Recognized] Found First Sea Button at {sea_pos}")
         focus_roblox_window(maximize=True)
-        print(f"  [Action] pydirectinput.click({sea_pos[0]}, {sea_pos[1]})...")
-        pydirectinput.click(sea_pos[0], sea_pos[1])
+        print(f"  [Action] Hovering & Clicking 'First Sea' Button at {sea_pos}...")
+        real_mouse_click(sea_pos[0], sea_pos[1], hover_pause=0.3)
     else:
         print("  [!] ERROR: Image recognition failed for 'assets/first_sea_button.png'. Please re-run setup.py!")
 

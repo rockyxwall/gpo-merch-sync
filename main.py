@@ -231,6 +231,13 @@ def enter_ps_code(code):
     if not code:
         pydirectinput.write(code)
 
+def real_mouse_click(x, y, hover_pause=0.3):
+    """Moves physical cursor to (x, y), hovers to trigger UI hover state, then clicks."""
+    pydirectinput.moveTo(x, y)
+    time.sleep(hover_pause)
+    pydirectinput.click(x, y)
+    time.sleep(0.2)
+
 def run_ps_join_workflow(config):
     afk_desktop = config.get("afk_desktop_index", 2)
     ps_code = config.get("gpo_ps_code", "")
@@ -277,8 +284,8 @@ def run_ps_join_workflow(config):
     
     if ps_btn_pos:
         focus_roblox_window(maximize=True)
-        print(f"[Action] DirectInput Clicking Main Menu PS Button at {ps_btn_pos}...")
-        pydirectinput.click(ps_btn_pos[0], ps_btn_pos[1])
+        print(f"[Action] Hovering & Clicking Main Menu PS Button at {ps_btn_pos}...")
+        real_mouse_click(ps_btn_pos[0], ps_btn_pos[1], hover_pause=0.3)
         time.sleep(2.0)
     else:
         print("[!] ERROR: Image recognition failed for 'assets/ps_button.png'. Please re-run setup.py!")
@@ -297,8 +304,8 @@ def run_ps_join_workflow(config):
 
     if ps_pos:
         focus_roblox_window(maximize=True)
-        print(f"[Action] DirectInput Clicking PS Code Box at {ps_pos}...")
-        pydirectinput.click(ps_pos[0], ps_pos[1])
+        print(f"[Action] Hovering & Clicking PS Code Box at {ps_pos}...")
+        real_mouse_click(ps_pos[0], ps_pos[1], hover_pause=0.3)
         time.sleep(0.5)
         
         print("[Action] Pasting PS Code...")
@@ -322,8 +329,8 @@ def run_ps_join_workflow(config):
 
     if reg_pos:
         focus_roblox_window(maximize=True)
-        print(f"[Action] DirectInput Clicking 'Regular' button at {reg_pos}...")
-        pydirectinput.click(reg_pos[0], reg_pos[1])
+        print(f"[Action] Hovering & Clicking 'Regular' button at {reg_pos}...")
+        real_mouse_click(reg_pos[0], reg_pos[1], hover_pause=0.3)
         time.sleep(2.5)
     else:
         print("[!] ERROR: Image recognition failed for 'assets/regular_button.png'. Please re-run setup.py!")
@@ -344,8 +351,8 @@ def run_ps_join_workflow(config):
 
     if sea_pos:
         focus_roblox_window(maximize=True)
-        print(f"[Action] DirectInput Clicking 'First Sea' button at {sea_pos}...")
-        pydirectinput.click(sea_pos[0], sea_pos[1])
+        print(f"[Action] Hovering & Clicking 'First Sea' button at {sea_pos}...")
+        real_mouse_click(sea_pos[0], sea_pos[1], hover_pause=0.3)
     else:
         print("[!] ERROR: Image recognition failed for 'assets/first_sea_button.png'. Please re-run setup.py!")
         return False
