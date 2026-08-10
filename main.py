@@ -68,27 +68,30 @@ def send_toast(title, message):
 
 def get_current_desktop_num():
     try:
-        if hasattr(pyvda, "get_current_desktop"):
-            return pyvda.get_current_desktop().number
-        elif hasattr(pyvda, "VirtualDesktop"):
+        if hasattr(pyvda, "VirtualDesktop"):
             return pyvda.VirtualDesktop.current().number
+        elif hasattr(pyvda, "get_current_desktop"):
+            return pyvda.get_current_desktop().number
     except Exception:
         pass
     return 1
 
 def switch_to_desktop_num(num):
     try:
-        desktops = []
-        if hasattr(pyvda, "get_virtual_desktops"):
+        if hasattr(pyvda, "VirtualDesktop"):
+            pyvda.VirtualDesktop(num).go()
+            time.sleep(0.5)
+            return True
+        elif hasattr(pyvda, "get_virtual_desktops"):
             desktops = pyvda.get_virtual_desktops()
-        elif hasattr(pyvda, "get_desktops"):
-            desktops = pyvda.get_desktops()
-            
-        for d in desktops:
-            if getattr(d, "number", None) == num:
-                d.switch()
-                time.sleep(0.5)
-                return True
+            for d in desktops:
+                if getattr(d, "number", None) == num:
+                    if hasattr(d, "go"):
+                        d.go()
+                    elif hasattr(d, "switch"):
+                        d.switch()
+                    time.sleep(0.5)
+                    return True
     except Exception as e:
         print(f"[!] Virtual desktop switch error: {e}")
     return False
@@ -117,6 +120,21 @@ def setup_hotkeys(afk_desktop_num):
 
 def focus_roblox_window():
     try:
+        hwnd = ctypes.windll.user32.FindWindowW(None, "Roblox")
+        if not hwnd:
+            windows = gw.getWindowsWithTitle("Roblox")
+            if windows:
+                hwnd = windows[0]._hWnd
+        
+        if hwnd:
+            ctypes.windll.user32.ShowWindow(hwnd, 9)
+            ctypes.windll.user32.BringWindowToTop(hwnd)
+            ctypes.windll.user32.keybd_event(0x12, 0, 0, 0)  # Alt down
+            ctypes.windll.user32.SetForegroundWindow(hwnd)
+            ctypes.windll.user32.keybd_event(0x12, 0, 2, 0)  # Alt up
+            time.sleep(0.5)
+            return True
+            
         windows = gw.getWindowsWithTitle("Roblox")
         if windows:
             rbox = windows[0]
@@ -125,8 +143,8 @@ def focus_roblox_window():
             rbox.activate()
             time.sleep(0.5)
             return True
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"[!] Warning focusing Roblox window: {e}")
     return False
 
 def find_image_on_screen(image_name, confidence=0.8, timeout=90):
@@ -197,10 +215,28 @@ def run_ps_join_workflow(config):
     # 2. Browserless Launch via roblox://
     print("[Action] Launching Roblox GPO via roblox:// protocol...")
     os.startfile(f"roblox://placeId={place_id}")
-    time.sleep(4.0)
+    
+    # Wait for Roblox window to load & activate it
+    print("[System] Waiting for Roblox window to load...")
+    roblox_loaded = False
+    for _ in range(15):
+        if focus_roblox_window():
+            roblox_loaded = True
+            break
+        time.sleep(1.0)
+        
+    time.sleep(3.0)  # Wait for splash screen
 
-    # 3. Main Menu PS Button
+    # 3. Press Space (or any key) to skip splash screen and enter Main Menu
+    print("[Action] Focusing Roblox & pressing SPACE to enter Main Menu...")
+    focus_roblox_window()
+    time.sleep(0.3)
+    pydirectinput.press('space')
+    time.sleep(2.5)  # Wait for main menu UI buttons to appear
+
+    # 4. Main Menu PS Button
     print("[System] Clicking Main Menu Private Server button...")
+    focus_roblox_window()
     ps_btn_pos = None
     if coords.get("ps_button") and isinstance(coords["ps_button"], dict):
         ps_btn_pos = (coords["ps_button"]["x"], coords["ps_button"]["y"])
@@ -213,8 +249,9 @@ def run_ps_join_workflow(config):
         pydirectinput.click(ps_btn_pos[0], ps_btn_pos[1])
         time.sleep(1.5)
 
-    # 4. PS Code Box
+    # 5. PS Code Box
     print("[System] Clicking PS Code text input box...")
+    focus_roblox_window()
     ps_pos = None
     if coords.get("ps_box") and isinstance(coords["ps_box"], dict):
         ps_pos = (coords["ps_box"]["x"], coords["ps_box"]["y"])
@@ -232,8 +269,9 @@ def run_ps_join_workflow(config):
         pydirectinput.press('enter')
         time.sleep(2.5)
 
-    # 5. Regular Button
+    # 6. Regular Button
     print("[System] Clicking 'Regular' game mode button...")
+    focus_roblox_window()
     reg_pos = None
     if coords.get("regular_button") and isinstance(coords["regular_button"], dict):
         reg_pos = (coords["regular_button"]["x"], coords["regular_button"]["y"])
@@ -241,12 +279,14 @@ def run_ps_join_workflow(config):
         reg_pos = find_image_on_screen("regular_button.png", confidence=config.get("confidence", 0.8), timeout=30)
 
     if reg_pos:
+        focus_roblox_window()
         print(f"[Action] DirectInput Clicking 'Regular' button at {reg_pos}...")
         pydirectinput.click(reg_pos[0], reg_pos[1])
         time.sleep(2.0)
 
-    # 6. First Sea Button
+    # 7. First Sea Button
     print("[System] Clicking 'First Sea' button...")
+    focus_roblox_window()
     sea_pos = None
     if coords.get("first_sea_button") and isinstance(coords["first_sea_button"], dict):
         sea_pos = (coords["first_sea_button"]["x"], coords["first_sea_button"]["y"])
@@ -254,6 +294,7 @@ def run_ps_join_workflow(config):
         sea_pos = find_image_on_screen("first_sea.png", confidence=config.get("confidence", 0.8), timeout=30)
 
     if sea_pos:
+        focus_roblox_window()
         print(f"[Action] DirectInput Clicking 'First Sea' button at {sea_pos}...")
         pydirectinput.click(sea_pos[0], sea_pos[1])
 

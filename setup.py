@@ -141,7 +141,7 @@ def main():
     place_id = config.get("roblox_place_id", "1730877806")
     print(f"\n[Action] Launching Grand Piece Online (Place ID: {place_id}) via roblox:// protocol...")
     os.startfile(f"roblox://placeId={place_id}")
-    input("\n[!] Press ENTER once GPO has loaded and the Main Menu is visible on your screen... ")
+    input("\n[!] Press SPACE in GPO (or any key) to enter Main Menu, then press ENTER in this terminal... ")
 
     existing_coords = config.get("coords", {})
 
