@@ -166,7 +166,19 @@ def wait_for_roblox_window(timeout=30):
     print("[!] Roblox window was NOT found within timeout.")
     return False
 
-def find_image_on_screen(image_name, confidence=0.8, timeout=90):
+def get_config_confidence():
+    try:
+        if os.path.exists(CONFIG_PATH):
+            with open(CONFIG_PATH, "r") as f:
+                cfg = json.load(f)
+                return float(cfg.get("confidence", 0.5))
+    except Exception:
+        pass
+    return 0.5
+
+def find_image_on_screen(image_name, confidence=None, timeout=90):
+    if confidence is None:
+        confidence = get_config_confidence()
     image_path = os.path.join(ASSETS_DIR, image_name)
     if not os.path.exists(image_path):
         print(f"[!] Template image missing: {image_path}. Run setup.py first!")
@@ -201,9 +213,10 @@ def find_image_on_screen(image_name, confidence=0.8, timeout=90):
         if max_val >= confidence:
             center_x = max_loc[0] + (tw // 2)
             center_y = max_loc[1] + (th // 2)
+            print(f" [✓ Image Rec] {image_name} matched at ({center_x}, {center_y}) score: {max_val:.2f} (threshold: {confidence:.2f})")
             return (center_x, center_y)
             
-        time.sleep(1)
+        time.sleep(0.5)
         
     return None
 
@@ -237,13 +250,15 @@ def run_ps_join_workflow(config):
         print("[!] CRITICAL: Roblox window failed to launch or be detected. Aborting join workflow.")
         return False
 
+    conf = config.get("confidence", 0.5)
+
     # 3. Detect GPO Splash Logo (gpo_logo.png) & Press 'f' to enter Main Menu
     if not focus_roblox_window(maximize=True):
         print("[!] Roblox window lost before GPO logo check. Aborting.")
         return False
         
-    print("[System] Scanning screen with OpenCV for GPO Logo ('gpo_logo.png', timeout 45s)...")
-    logo_pos = find_image_on_screen("gpo_logo.png", confidence=0.7, timeout=45)
+    print(f"[System] Scanning screen with OpenCV for GPO Logo ('gpo_logo.png', timeout 45s, threshold {conf})...")
+    logo_pos = find_image_on_screen("gpo_logo.png", confidence=conf, timeout=45)
     if logo_pos:
         print(f" [✓ Image Recognized] GPO Splash screen detected at {logo_pos}!")
 
@@ -253,15 +268,14 @@ def run_ps_join_workflow(config):
     time.sleep(3.0)  # Wait for main menu UI buttons to appear
 
     # 4. Main Menu PS Button (100% Pure Image Recognition)
-    print("[System] Using OpenCV image recognition to detect Main Menu ('ps_button.png')...")
+    print(f"[System] Using OpenCV image recognition to detect Main Menu ('ps_button.png', threshold {conf})...")
     if not focus_roblox_window(maximize=True):
         print("[!] Roblox window lost before PS Button click. Aborting.")
         return False
         
-    ps_btn_pos = find_image_on_screen("ps_button.png", confidence=0.7, timeout=30)
+    ps_btn_pos = find_image_on_screen("ps_button.png", confidence=conf, timeout=30)
     
     if ps_btn_pos:
-        print(f" [✓ Image Recognized] Main Menu screen detected via image recognition at {ps_btn_pos}!")
         focus_roblox_window(maximize=True)
         print(f"[Action] DirectInput Clicking Main Menu PS Button at {ps_btn_pos}...")
         pydirectinput.click(ps_btn_pos[0], ps_btn_pos[1])
@@ -274,15 +288,14 @@ def run_ps_join_workflow(config):
         return False
 
     # 5. PS Code Box (100% Pure Image Recognition)
-    print("[System] Using image recognition to detect PS Code text input box ('ps_box.png')...")
+    print(f"[System] Using image recognition to detect PS Code text input box ('ps_box.png', threshold {conf})...")
     if not focus_roblox_window(maximize=True):
         print("[!] Roblox window lost before PS Box click. Aborting.")
         return False
         
-    ps_pos = find_image_on_screen("ps_box.png", confidence=0.7, timeout=15)
+    ps_pos = find_image_on_screen("ps_box.png", confidence=conf, timeout=15)
 
     if ps_pos:
-        print(f" [✓ Image Recognized] Found PS Box at {ps_pos}")
         focus_roblox_window(maximize=True)
         print(f"[Action] DirectInput Clicking PS Code Box at {ps_pos}...")
         pydirectinput.click(ps_pos[0], ps_pos[1])
@@ -300,15 +313,14 @@ def run_ps_join_workflow(config):
         return False
 
     # 6. Regular Button (100% Pure Image Recognition)
-    print("[System] Using image recognition to detect 'Regular' game mode button...")
+    print(f"[System] Using image recognition to detect 'Regular' game mode button (threshold {conf})...")
     if not focus_roblox_window(maximize=True):
         print("[!] Roblox window lost before Regular Button click. Aborting.")
         return False
         
-    reg_pos = find_image_on_screen("regular_button.png", confidence=0.7, timeout=15)
+    reg_pos = find_image_on_screen("regular_button.png", confidence=conf, timeout=15)
 
     if reg_pos:
-        print(f" [✓ Image Recognized] Found Regular Button at {reg_pos}")
         focus_roblox_window(maximize=True)
         print(f"[Action] DirectInput Clicking 'Regular' button at {reg_pos}...")
         pydirectinput.click(reg_pos[0], reg_pos[1])
@@ -321,17 +333,16 @@ def run_ps_join_workflow(config):
         return False
 
     # 7. First Sea Button (100% Pure Image Recognition)
-    print("[System] Using image recognition to detect 'First Sea' button...")
+    print(f"[System] Using image recognition to detect 'First Sea' button (threshold {conf})...")
     if not focus_roblox_window(maximize=True):
         print("[!] Roblox window lost before First Sea Button click. Aborting.")
         return False
         
-    sea_pos = find_image_on_screen("first_sea_button.png", confidence=0.7, timeout=15)
+    sea_pos = find_image_on_screen("first_sea_button.png", confidence=conf, timeout=15)
     if not sea_pos:
-        sea_pos = find_image_on_screen("first_sea.png", confidence=0.7, timeout=5)
+        sea_pos = find_image_on_screen("first_sea.png", confidence=conf, timeout=5)
 
     if sea_pos:
-        print(f" [✓ Image Recognized] Found First Sea Button at {sea_pos}")
         focus_roblox_window(maximize=True)
         print(f"[Action] DirectInput Clicking 'First Sea' button at {sea_pos}...")
         pydirectinput.click(sea_pos[0], sea_pos[1])

@@ -132,7 +132,19 @@ def wait_for_roblox_window(timeout=30):
     print("  [!] Roblox window was NOT found within timeout.")
     return False
 
-def find_image_on_screen(image_name, confidence=0.7, timeout=10):
+def get_config_confidence():
+    try:
+        if os.path.exists(CONFIG_PATH):
+            with open(CONFIG_PATH, "r") as f:
+                cfg = json.load(f)
+                return float(cfg.get("confidence", 0.5))
+    except Exception:
+        pass
+    return 0.5
+
+def find_image_on_screen(image_name, confidence=None, timeout=10):
+    if confidence is None:
+        confidence = get_config_confidence()
     image_path = os.path.join(ASSETS_DIR, image_name)
     if not os.path.exists(image_path):
         print(f"  [Notice] Image template file missing: assets/{image_name}")
@@ -227,6 +239,8 @@ def run_debug():
         print("[!] Aborting join sequence.")
         return
 
+    conf = float(config.get("confidence", 0.5))
+
     if EMERGENCY_STOP:
         return
 
@@ -236,8 +250,8 @@ def run_debug():
         print("[!] Roblox window lost before GPO logo check. Aborting.")
         return
         
-    print("  [System] Scanning screen with OpenCV for GPO Logo ('gpo_logo.png', timeout 45s)...")
-    logo_pos = find_image_on_screen("gpo_logo.png", confidence=0.7, timeout=45)
+    print(f"  [System] Scanning screen with OpenCV for GPO Logo ('gpo_logo.png', timeout 45s, threshold {conf})...")
+    logo_pos = find_image_on_screen("gpo_logo.png", confidence=conf, timeout=45)
     
     if logo_pos:
         print(f"  [✓ Image Recognized] GPO Logo screen detected at {logo_pos}!")
@@ -258,8 +272,8 @@ def run_debug():
         print("[!] Roblox window lost before PS Button click. Aborting.")
         return
         
-    print("  [System] Scanning screen with OpenCV for 'ps_button.png' (timeout 30s)...")
-    ps_btn_pos = find_image_on_screen("ps_button.png", confidence=0.7, timeout=30)
+    print(f"  [System] Scanning screen with OpenCV for 'ps_button.png' (timeout 30s, threshold {conf})...")
+    ps_btn_pos = find_image_on_screen("ps_button.png", confidence=conf, timeout=30)
     
     if ps_btn_pos:
         print(f"  [✓ Image Recognized] Found Main Menu PS Button at {ps_btn_pos}")
@@ -280,8 +294,8 @@ def run_debug():
         print("[!] Roblox window lost before PS Box click. Aborting.")
         return
         
-    print("  [System] Scanning screen with OpenCV for 'ps_box.png' (timeout 15s)...")
-    ps_pos = find_image_on_screen("ps_box.png", confidence=0.7, timeout=15)
+    print(f"  [System] Scanning screen with OpenCV for 'ps_box.png' (timeout 15s, threshold {conf})...")
+    ps_pos = find_image_on_screen("ps_box.png", confidence=conf, timeout=15)
 
     if ps_pos:
         print(f"  [✓ Image Recognized] Found PS Box at {ps_pos}")
@@ -306,8 +320,8 @@ def run_debug():
         print("[!] Roblox window lost before Regular Button click. Aborting.")
         return
         
-    print("  [System] Scanning screen with OpenCV for 'regular_button.png' (timeout 15s)...")
-    reg_pos = find_image_on_screen("regular_button.png", confidence=0.7, timeout=15)
+    print(f"  [System] Scanning screen with OpenCV for 'regular_button.png' (timeout 15s, threshold {conf})...")
+    reg_pos = find_image_on_screen("regular_button.png", confidence=conf, timeout=15)
 
     if reg_pos:
         print(f"  [✓ Image Recognized] Found Regular Button at {reg_pos}")
@@ -328,10 +342,10 @@ def run_debug():
         print("[!] Roblox window lost before First Sea Button click. Aborting.")
         return
         
-    print("  [System] Scanning screen with OpenCV for 'first_sea_button.png' (timeout 15s)...")
-    sea_pos = find_image_on_screen("first_sea_button.png", confidence=0.7, timeout=15)
+    print(f"  [System] Scanning screen with OpenCV for 'first_sea_button.png' (timeout 15s, threshold {conf})...")
+    sea_pos = find_image_on_screen("first_sea_button.png", confidence=conf, timeout=15)
     if not sea_pos:
-        sea_pos = find_image_on_screen("first_sea.png", confidence=0.7, timeout=5)
+        sea_pos = find_image_on_screen("first_sea.png", confidence=conf, timeout=5)
 
     if sea_pos:
         print(f"  [✓ Image Recognized] Found First Sea Button at {sea_pos}")

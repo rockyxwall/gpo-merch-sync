@@ -93,7 +93,7 @@ def main():
         "gpo_ps_code": "",
         "roblox_place_id": "1730877806",
         "afk_desktop_index": 2,
-        "confidence": 0.7,
+        "confidence": 0.5,
         "menu_timeout_seconds": 90,
         "merchant_alarm_lead_seconds": 15,
         "afk_timeout_seconds": 300,
