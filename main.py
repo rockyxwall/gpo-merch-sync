@@ -252,46 +252,37 @@ def run_ps_join_workflow(config):
     pydirectinput.press('f')
     time.sleep(3.0)  # Wait for main menu UI buttons to appear
 
-    if EMERGENCY_STOP:
-        return False
-
-    # 4. Main Menu PS Button (Image Recognition for Main Menu Screen)
+    # 4. Main Menu PS Button (100% Pure Image Recognition)
     print("[System] Using OpenCV image recognition to detect Main Menu ('ps_button.png')...")
     if not focus_roblox_window(maximize=True):
         print("[!] Roblox window lost before PS Button click. Aborting.")
         return False
         
-    ps_btn_pos = find_image_on_screen("ps_button.png", confidence=0.7, timeout=20)
+    ps_btn_pos = find_image_on_screen("ps_button.png", confidence=0.7, timeout=30)
+    
     if ps_btn_pos:
-        print(f" [✓ Image Rec] Main Menu screen detected via image recognition at {ps_btn_pos}!")
-    elif coords.get("ps_button") and isinstance(coords["ps_button"], dict):
-        ps_btn_pos = (coords["ps_button"]["x"], coords["ps_button"]["y"])
-        print(f" [Fallback Coords] Using saved coordinate for Main Menu PS button: {ps_btn_pos}")
-
-    if ps_btn_pos:
+        print(f" [✓ Image Recognized] Main Menu screen detected via image recognition at {ps_btn_pos}!")
         focus_roblox_window(maximize=True)
         print(f"[Action] DirectInput Clicking Main Menu PS Button at {ps_btn_pos}...")
         pydirectinput.click(ps_btn_pos[0], ps_btn_pos[1])
         time.sleep(2.0)
     else:
-        print("[!] No template image or coordinates found for Main Menu PS Button! Aborting.")
+        print("[!] ERROR: Image recognition failed for 'assets/ps_button.png'. Please re-run setup.py!")
         return False
 
     if EMERGENCY_STOP:
         return False
 
-    # 5. PS Code Box
+    # 5. PS Code Box (100% Pure Image Recognition)
     print("[System] Using image recognition to detect PS Code text input box ('ps_box.png')...")
     if not focus_roblox_window(maximize=True):
         print("[!] Roblox window lost before PS Box click. Aborting.")
         return False
         
-    ps_pos = find_image_on_screen("ps_box.png", confidence=0.7, timeout=10)
-    if not ps_pos and coords.get("ps_box") and isinstance(coords["ps_box"], dict):
-        ps_pos = (coords["ps_box"]["x"], coords["ps_box"]["y"])
-        print(f" [Fallback Coords] Using saved coordinate for PS Box: {ps_pos}")
+    ps_pos = find_image_on_screen("ps_box.png", confidence=0.7, timeout=15)
 
     if ps_pos:
+        print(f" [✓ Image Recognized] Found PS Box at {ps_pos}")
         focus_roblox_window(maximize=True)
         print(f"[Action] DirectInput Clicking PS Code Box at {ps_pos}...")
         pydirectinput.click(ps_pos[0], ps_pos[1])
@@ -302,52 +293,51 @@ def run_ps_join_workflow(config):
         pydirectinput.press('enter')
         time.sleep(3.0)
     else:
-        print("[!] No template image or coordinates found for PS Box! Aborting.")
+        print("[!] ERROR: Image recognition failed for 'assets/ps_box.png'. Please re-run setup.py!")
         return False
 
     if EMERGENCY_STOP:
         return False
 
-    # 6. Regular Button
+    # 6. Regular Button (100% Pure Image Recognition)
     print("[System] Using image recognition to detect 'Regular' game mode button...")
     if not focus_roblox_window(maximize=True):
         print("[!] Roblox window lost before Regular Button click. Aborting.")
         return False
         
-    reg_pos = find_image_on_screen("regular_button.png", confidence=0.7, timeout=10)
-    if not reg_pos and coords.get("regular_button") and isinstance(coords["regular_button"], dict):
-        reg_pos = (coords["regular_button"]["x"], coords["regular_button"]["y"])
-        print(f" [Fallback Coords] Using saved coordinate for Regular button: {reg_pos}")
+    reg_pos = find_image_on_screen("regular_button.png", confidence=0.7, timeout=15)
 
     if reg_pos:
+        print(f" [✓ Image Recognized] Found Regular Button at {reg_pos}")
         focus_roblox_window(maximize=True)
         print(f"[Action] DirectInput Clicking 'Regular' button at {reg_pos}...")
         pydirectinput.click(reg_pos[0], reg_pos[1])
         time.sleep(2.5)
     else:
-        print("[!] No template image or coordinates found for Regular Button! Aborting.")
+        print("[!] ERROR: Image recognition failed for 'assets/regular_button.png'. Please re-run setup.py!")
         return False
 
     if EMERGENCY_STOP:
         return False
 
-    # 7. First Sea Button
+    # 7. First Sea Button (100% Pure Image Recognition)
     print("[System] Using image recognition to detect 'First Sea' button...")
     if not focus_roblox_window(maximize=True):
         print("[!] Roblox window lost before First Sea Button click. Aborting.")
         return False
         
-    sea_pos = find_image_on_screen("first_sea_button.png", confidence=0.7, timeout=10)
+    sea_pos = find_image_on_screen("first_sea_button.png", confidence=0.7, timeout=15)
     if not sea_pos:
         sea_pos = find_image_on_screen("first_sea.png", confidence=0.7, timeout=5)
-    if not sea_pos and coords.get("first_sea_button") and isinstance(coords["first_sea_button"], dict):
-        sea_pos = (coords["first_sea_button"]["x"], coords["first_sea_button"]["y"])
-        print(f" [Fallback Coords] Using saved coordinate for First Sea button: {sea_pos}")
 
     if sea_pos:
+        print(f" [✓ Image Recognized] Found First Sea Button at {sea_pos}")
         focus_roblox_window(maximize=True)
         print(f"[Action] DirectInput Clicking 'First Sea' button at {sea_pos}...")
         pydirectinput.click(sea_pos[0], sea_pos[1])
+    else:
+        print("[!] ERROR: Image recognition failed for 'assets/first_sea_button.png'. Please re-run setup.py!")
+        return False
 
     print(" [✓] Server join sequence completed!")
     return True
