@@ -118,7 +118,7 @@ def setup_hotkeys(afk_desktop_num):
     keyboard.add_hotkey("f6", on_f6)
     print(" [Keybinds Active] F8: Finish Stock Check & Return | F6: Emergency Force Stop")
 
-def focus_roblox_window():
+def focus_roblox_window(maximize=True):
     try:
         hwnd = ctypes.windll.user32.FindWindowW(None, "Roblox")
         if not hwnd:
@@ -127,7 +127,8 @@ def focus_roblox_window():
                 hwnd = windows[0]._hWnd
         
         if hwnd:
-            ctypes.windll.user32.ShowWindow(hwnd, 9)
+            cmd = 3 if maximize else 9  # 3 = SW_MAXIMIZE, 9 = SW_RESTORE
+            ctypes.windll.user32.ShowWindow(hwnd, cmd)
             ctypes.windll.user32.BringWindowToTop(hwnd)
             ctypes.windll.user32.keybd_event(0x12, 0, 0, 0)  # Alt down
             ctypes.windll.user32.SetForegroundWindow(hwnd)
@@ -138,13 +139,31 @@ def focus_roblox_window():
         windows = gw.getWindowsWithTitle("Roblox")
         if windows:
             rbox = windows[0]
-            if rbox.isMinimized:
+            if maximize:
+                try:
+                    rbox.maximize()
+                except Exception:
+                    pass
+            elif rbox.isMinimized:
                 rbox.restore()
             rbox.activate()
             time.sleep(0.5)
             return True
     except Exception as e:
         print(f"[!] Warning focusing Roblox window: {e}")
+    return False
+
+def wait_for_roblox_window(timeout=30):
+    print(f"[System] Waiting up to {timeout}s for Roblox window to load & maximize...")
+    start = time.time()
+    while time.time() - start < timeout:
+        if EMERGENCY_STOP:
+            return False
+        if focus_roblox_window(maximize=True):
+            print(f" [✓] Roblox window detected & MAXIMIZED on screen!")
+            return True
+        time.sleep(1.0)
+    print("[!] Roblox window was NOT found within timeout.")
     return False
 
 def find_image_on_screen(image_name, confidence=0.8, timeout=90):
@@ -216,27 +235,36 @@ def run_ps_join_workflow(config):
     print("[Action] Launching Roblox GPO via roblox:// protocol...")
     os.startfile(f"roblox://placeId={place_id}")
     
-    # Wait for Roblox window to load & activate it
-    print("[System] Waiting for Roblox window to load...")
-    roblox_loaded = False
-    for _ in range(15):
-        if focus_roblox_window():
-            roblox_loaded = True
-            break
-        time.sleep(1.0)
-        
-    time.sleep(3.0)  # Wait for splash screen
+    # Wait for Roblox window to load & maximize
+    roblox_ready = wait_for_roblox_window(timeout=30)
+    if not roblox_ready:
+        print("[!] CRITICAL: Roblox window failed to launch or be detected. Aborting join workflow.")
+        return False
+
+    print(" [System] Waiting 5 seconds for GPO loading screen assets to initialize...")
+    time.sleep(5.0)
+
+    if EMERGENCY_STOP:
+        return False
 
     # 3. Press 'f' (or any key) to skip splash screen and enter Main Menu
+    if not focus_roblox_window(maximize=True):
+        print("[!] Roblox window lost before keypress. Aborting.")
+        return False
+        
     print("[Action] Focusing Roblox & pressing 'f' key to enter Main Menu...")
-    focus_roblox_window()
-    time.sleep(0.3)
     pydirectinput.press('f')
-    time.sleep(2.5)  # Wait for main menu UI buttons to appear
+    time.sleep(3.0)  # Wait for main menu UI buttons to appear
+
+    if EMERGENCY_STOP:
+        return False
 
     # 4. Main Menu PS Button
     print("[System] Clicking Main Menu Private Server button...")
-    focus_roblox_window()
+    if not focus_roblox_window(maximize=True):
+        print("[!] Roblox window lost before PS Button click. Aborting.")
+        return False
+        
     ps_btn_pos = None
     if coords.get("ps_button") and isinstance(coords["ps_button"], dict):
         ps_btn_pos = (coords["ps_button"]["x"], coords["ps_button"]["y"])
@@ -244,14 +272,23 @@ def run_ps_join_workflow(config):
         ps_btn_pos = find_image_on_screen("ps_button.png", confidence=config.get("confidence", 0.8), timeout=15)
 
     if ps_btn_pos:
-        focus_roblox_window()
+        focus_roblox_window(maximize=True)
         print(f"[Action] DirectInput Clicking Main Menu PS Button at {ps_btn_pos}...")
         pydirectinput.click(ps_btn_pos[0], ps_btn_pos[1])
-        time.sleep(1.5)
+        time.sleep(2.0)
+    else:
+        print("[!] No coordinates or template found for Main Menu PS Button! Aborting.")
+        return False
+
+    if EMERGENCY_STOP:
+        return False
 
     # 5. PS Code Box
     print("[System] Clicking PS Code text input box...")
-    focus_roblox_window()
+    if not focus_roblox_window(maximize=True):
+        print("[!] Roblox window lost before PS Box click. Aborting.")
+        return False
+        
     ps_pos = None
     if coords.get("ps_box") and isinstance(coords["ps_box"], dict):
         ps_pos = (coords["ps_box"]["x"], coords["ps_box"]["y"])
@@ -259,7 +296,7 @@ def run_ps_join_workflow(config):
         ps_pos = find_image_on_screen("ps_box.png", confidence=config.get("confidence", 0.8), timeout=30)
 
     if ps_pos:
-        focus_roblox_window()
+        focus_roblox_window(maximize=True)
         print(f"[Action] DirectInput Clicking PS Code Box at {ps_pos}...")
         pydirectinput.click(ps_pos[0], ps_pos[1])
         time.sleep(0.5)
@@ -267,11 +304,20 @@ def run_ps_join_workflow(config):
         print("[Action] Pasting PS Code...")
         enter_ps_code(ps_code)
         pydirectinput.press('enter')
-        time.sleep(2.5)
+        time.sleep(3.0)
+    else:
+        print("[!] No coordinates or template found for PS Box! Aborting.")
+        return False
+
+    if EMERGENCY_STOP:
+        return False
 
     # 6. Regular Button
     print("[System] Clicking 'Regular' game mode button...")
-    focus_roblox_window()
+    if not focus_roblox_window(maximize=True):
+        print("[!] Roblox window lost before Regular Button click. Aborting.")
+        return False
+        
     reg_pos = None
     if coords.get("regular_button") and isinstance(coords["regular_button"], dict):
         reg_pos = (coords["regular_button"]["x"], coords["regular_button"]["y"])
@@ -279,14 +325,23 @@ def run_ps_join_workflow(config):
         reg_pos = find_image_on_screen("regular_button.png", confidence=config.get("confidence", 0.8), timeout=30)
 
     if reg_pos:
-        focus_roblox_window()
+        focus_roblox_window(maximize=True)
         print(f"[Action] DirectInput Clicking 'Regular' button at {reg_pos}...")
         pydirectinput.click(reg_pos[0], reg_pos[1])
-        time.sleep(2.0)
+        time.sleep(2.5)
+    else:
+        print("[!] No coordinates or template found for Regular Button! Aborting.")
+        return False
+
+    if EMERGENCY_STOP:
+        return False
 
     # 7. First Sea Button
     print("[System] Clicking 'First Sea' button...")
-    focus_roblox_window()
+    if not focus_roblox_window(maximize=True):
+        print("[!] Roblox window lost before First Sea Button click. Aborting.")
+        return False
+        
     sea_pos = None
     if coords.get("first_sea_button") and isinstance(coords["first_sea_button"], dict):
         sea_pos = (coords["first_sea_button"]["x"], coords["first_sea_button"]["y"])
@@ -294,7 +349,7 @@ def run_ps_join_workflow(config):
         sea_pos = find_image_on_screen("first_sea.png", confidence=config.get("confidence", 0.8), timeout=30)
 
     if sea_pos:
-        focus_roblox_window()
+        focus_roblox_window(maximize=True)
         print(f"[Action] DirectInput Clicking 'First Sea' button at {sea_pos}...")
         pydirectinput.click(sea_pos[0], sea_pos[1])
 

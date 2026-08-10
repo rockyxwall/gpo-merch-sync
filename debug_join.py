@@ -26,6 +26,8 @@ pydirectinput.PAUSE = 0.2
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "config.json")
 ASSETS_DIR = os.path.join(os.path.dirname(__file__), "assets")
 
+EMERGENCY_STOP = False
+
 def is_admin():
     try:
         return ctypes.windll.shell32.IsUserAnAdmin()
@@ -35,6 +37,19 @@ def is_admin():
 def force_kill_roblox():
     print("  [Action] Force closing Roblox (taskkill)...")
     subprocess.run("taskkill /f /im RobloxPlayerBeta.exe", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+def setup_hotkeys():
+    global EMERGENCY_STOP
+    def on_stop():
+        global EMERGENCY_STOP
+        print("\n[Hotkey F6/F8] EMERGENCY FORCE STOP TRIGGERED! Closing Roblox...")
+        EMERGENCY_STOP = True
+        force_kill_roblox()
+        os._exit(1)
+
+    keyboard.add_hotkey("f6", on_stop)
+    keyboard.add_hotkey("f8", on_stop)
+    print(" [Hotkeys Active] Press F6 or F8 at any time to FORCE STOP the script.")
 
 def get_current_desktop_num():
     try:
@@ -69,8 +84,7 @@ def switch_to_desktop_num(num):
         print(f"  [!] Virtual desktop switch error: {e}")
     return False
 
-def focus_roblox_window():
-    print("  [Action] Attempting to focus Roblox window...")
+def focus_roblox_window(maximize=True):
     try:
         hwnd = ctypes.windll.user32.FindWindowW(None, "Roblox")
         if not hwnd:
@@ -79,10 +93,11 @@ def focus_roblox_window():
                 hwnd = windows[0]._hWnd
         
         if hwnd:
-            print(f"  [Found Window] HWND: {hwnd}")
-            ctypes.windll.user32.ShowWindow(hwnd, 9)  # SW_RESTORE
+            # 3 = SW_MAXIMIZE, 9 = SW_RESTORE
+            cmd = 3 if maximize else 9
+            ctypes.windll.user32.ShowWindow(hwnd, cmd)
             ctypes.windll.user32.BringWindowToTop(hwnd)
-            # Alt key tap to unlock SetForegroundWindow
+            # Alt key tap to unlock SetForegroundWindow privilege
             ctypes.windll.user32.keybd_event(0x12, 0, 0, 0)  # Alt down
             ctypes.windll.user32.SetForegroundWindow(hwnd)
             ctypes.windll.user32.keybd_event(0x12, 0, 2, 0)  # Alt up
@@ -92,16 +107,31 @@ def focus_roblox_window():
         windows = gw.getWindowsWithTitle("Roblox")
         if windows:
             rbox = windows[0]
-            print(f"  [Found Window via pygetwindow] Title: {rbox.title}")
-            if rbox.isMinimized:
+            if maximize:
+                try:
+                    rbox.maximize()
+                except Exception:
+                    pass
+            elif rbox.isMinimized:
                 rbox.restore()
             rbox.activate()
             time.sleep(0.5)
             return True
-        else:
-            print("  [!] Roblox window not found!")
     except Exception as e:
         print(f"  [!] Warning focusing Roblox window: {e}")
+    return False
+
+def wait_for_roblox_window(timeout=30):
+    print(f"  [System] Waiting up to {timeout}s for Roblox window to load & maximize...")
+    start = time.time()
+    while time.time() - start < timeout:
+        if EMERGENCY_STOP:
+            return False
+        if focus_roblox_window(maximize=True):
+            print(f"  [✓] Roblox window detected & MAXIMIZED on screen!")
+            return True
+        time.sleep(1.0)
+    print("  [!] Roblox window was NOT found within timeout.")
     return False
 
 def find_image_on_screen(image_name, confidence=0.8, timeout=10):
@@ -118,6 +148,8 @@ def find_image_on_screen(image_name, confidence=0.8, timeout=10):
     start_time = time.time()
     
     while time.time() - start_time < timeout:
+        if EMERGENCY_STOP:
+            return None
         screenshot = ImageGrab.grab()
         screenshot_path = os.path.join(ASSETS_DIR, "_temp_scan.png")
         screenshot.save(screenshot_path)
@@ -161,6 +193,8 @@ def run_debug():
     if not is_admin():
         print("[!] WARNING: Terminal is not running as Administrator.")
 
+    setup_hotkeys()
+
     if not os.path.exists(CONFIG_PATH):
         print(f"[!] config.json not found at {CONFIG_PATH}!")
         return
@@ -192,31 +226,39 @@ def run_debug():
     os.startfile(f"roblox://placeId={place_id}")
 
     # Step 3: Wait & Focus Window
-    print("\n--- [Step 3] Wait for Roblox & Focus ---")
-    print("  [System] Polling for Roblox window (max 15s)...")
-    focused = False
-    for i in range(15):
-        if focus_roblox_window():
-            print(f"  [✓] Focused Roblox window after {i+1} seconds.")
-            focused = True
-            break
-        time.sleep(1.0)
-        
-    if not focused:
-        print("  [!] Failed to focus Roblox window after 15 seconds.")
+    print("\n--- [Step 3] Wait for Roblox & Maximize Window ---")
+    roblox_ready = wait_for_roblox_window(timeout=30)
+    
+    if not roblox_ready:
+        print("\n[!] CRITICAL: Roblox window failed to launch or be detected.")
+        print("[!] Aborting join sequence to prevent premature background clicks.")
+        return
 
-    time.sleep(3.0)
+    print("  [System] Waiting 5 seconds for GPO loading screen assets to initialize...")
+    time.sleep(5.0)
+
+    if EMERGENCY_STOP:
+        return
 
     # Step 4: Keypress to dismiss splash
     print("\n--- [Step 4] Keypress to dismiss splash screen ---")
-    focus_roblox_window()
-    print("  [Action] Sending keypress 'f'...")
+    if not focus_roblox_window(maximize=True):
+        print("[!] Roblox window lost before keypress. Aborting.")
+        return
+        
+    print("  [Action] Sending keypress 'f' to enter Main Menu...")
     pydirectinput.press('f')
-    time.sleep(2.5)
+    time.sleep(3.0)
+
+    if EMERGENCY_STOP:
+        return
 
     # Step 5: PS Button
     print("\n--- [Step 5] Click Main Menu PS Button ---")
-    focus_roblox_window()
+    if not focus_roblox_window(maximize=True):
+        print("[!] Roblox window lost before PS Button click. Aborting.")
+        return
+        
     ps_btn_pos = None
     if coords.get("ps_button") and isinstance(coords["ps_button"], dict):
         ps_btn_pos = (coords["ps_button"]["x"], coords["ps_button"]["y"])
@@ -225,16 +267,23 @@ def run_debug():
         ps_btn_pos = find_image_on_screen("ps_button.png", timeout=5)
 
     if ps_btn_pos:
-        focus_roblox_window()
+        focus_roblox_window(maximize=True)
         print(f"  [Action] pydirectinput.click({ps_btn_pos[0]}, {ps_btn_pos[1]})...")
         pydirectinput.click(ps_btn_pos[0], ps_btn_pos[1])
-        time.sleep(1.5)
+        time.sleep(2.0)
     else:
-        print("  [!] No coordinates or template found for Main Menu PS Button!")
+        print("  [!] No coordinates or template found for Main Menu PS Button! Aborting.")
+        return
+
+    if EMERGENCY_STOP:
+        return
 
     # Step 6: PS Box
     print("\n--- [Step 6] Click PS Box & Paste PS Code ---")
-    focus_roblox_window()
+    if not focus_roblox_window(maximize=True):
+        print("[!] Roblox window lost before PS Box click. Aborting.")
+        return
+        
     ps_pos = None
     if coords.get("ps_box") and isinstance(coords["ps_box"], dict):
         ps_pos = (coords["ps_box"]["x"], coords["ps_box"]["y"])
@@ -243,20 +292,27 @@ def run_debug():
         ps_pos = find_image_on_screen("ps_box.png", timeout=5)
 
     if ps_pos:
-        focus_roblox_window()
+        focus_roblox_window(maximize=True)
         print(f"  [Action] pydirectinput.click({ps_pos[0]}, {ps_pos[1]})...")
         pydirectinput.click(ps_pos[0], ps_pos[1])
         time.sleep(0.5)
         enter_ps_code(ps_code)
         print("  [Action] Pressing Enter...")
         pydirectinput.press('enter')
-        time.sleep(2.5)
+        time.sleep(3.0)
     else:
-        print("  [!] No coordinates or template found for PS Box!")
+        print("  [!] No coordinates or template found for PS Box! Aborting.")
+        return
+
+    if EMERGENCY_STOP:
+        return
 
     # Step 7: Regular Button
     print("\n--- [Step 7] Click 'Regular' Button ---")
-    focus_roblox_window()
+    if not focus_roblox_window(maximize=True):
+        print("[!] Roblox window lost before Regular Button click. Aborting.")
+        return
+        
     reg_pos = None
     if coords.get("regular_button") and isinstance(coords["regular_button"], dict):
         reg_pos = (coords["regular_button"]["x"], coords["regular_button"]["y"])
@@ -265,16 +321,23 @@ def run_debug():
         reg_pos = find_image_on_screen("regular_button.png", timeout=5)
 
     if reg_pos:
-        focus_roblox_window()
+        focus_roblox_window(maximize=True)
         print(f"  [Action] pydirectinput.click({reg_pos[0]}, {reg_pos[1]})...")
         pydirectinput.click(reg_pos[0], reg_pos[1])
-        time.sleep(2.0)
+        time.sleep(2.5)
     else:
-        print("  [!] No coordinates or template found for Regular Button!")
+        print("  [!] No coordinates or template found for Regular Button! Aborting.")
+        return
+
+    if EMERGENCY_STOP:
+        return
 
     # Step 8: First Sea Button
     print("\n--- [Step 8] Click 'First Sea' Button ---")
-    focus_roblox_window()
+    if not focus_roblox_window(maximize=True):
+        print("[!] Roblox window lost before First Sea Button click. Aborting.")
+        return
+        
     sea_pos = None
     if coords.get("first_sea_button") and isinstance(coords["first_sea_button"], dict):
         sea_pos = (coords["first_sea_button"]["x"], coords["first_sea_button"]["y"])
@@ -283,7 +346,7 @@ def run_debug():
         sea_pos = find_image_on_screen("first_sea.png", timeout=5)
 
     if sea_pos:
-        focus_roblox_window()
+        focus_roblox_window(maximize=True)
         print(f"  [Action] pydirectinput.click({sea_pos[0]}, {sea_pos[1]})...")
         pydirectinput.click(sea_pos[0], sea_pos[1])
     else:
