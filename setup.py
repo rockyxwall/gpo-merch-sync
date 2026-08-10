@@ -143,7 +143,13 @@ def main():
         "menu_timeout_seconds": 90,
         "merchant_alarm_lead_seconds": 15,
         "afk_timeout_seconds": 300,
-        "coords": {}
+        "coords": {
+            "ps_button": None,
+            "ps_box": None,
+            "regular_button": None,
+            "first_sea_button": None,
+            "server_time": None
+        }
     }
     
     example_config_path = os.path.join(os.path.dirname(__file__), "config.example.json")
