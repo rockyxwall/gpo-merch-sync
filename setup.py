@@ -126,36 +126,64 @@ def main():
         current_ps = ""
 
     # 1. Prompt for PS Code
-    ps_input = input(f"\nEnter your GPO Private Server Code [{current_ps}]: ").strip()
-    if ps_input:
-        config["gpo_ps_code"] = ps_input
-    elif current_ps:
-        config["gpo_ps_code"] = current_ps
+    if current_ps:
+        print(f"\nExisting GPO Private Server Code: '{current_ps}'")
+        keep_ps = input("Keep existing Private Server Code? (y/n) [y]: ").strip().lower()
+        if keep_ps != 'n':
+            print(f" [✓] Preserved Private Server Code: '{current_ps}'")
+        else:
+            ps_input = input("Enter new GPO Private Server Code: ").strip()
+            if ps_input:
+                config["gpo_ps_code"] = ps_input
+    else:
+        ps_input = input("\nEnter your GPO Private Server Code: ").strip()
+        if ps_input:
+            config["gpo_ps_code"] = ps_input
 
     # 2. Virtual Desktop setup
+    current_desktop = config.get('afk_desktop_index', 2)
     print("\n[Virtual Desktop Setup]")
     print(" Hint: Press Win + Ctrl + D in Windows to create a new Virtual Desktop if needed.")
-    desktop_input = input(f"Enter Virtual Desktop number for Roblox AFK [Default {config.get('afk_desktop_index', 2)}]: ").strip()
-    if desktop_input.isdigit():
-        config["afk_desktop_index"] = int(desktop_input)
+    print(f"Existing Virtual Desktop for Roblox AFK: #{current_desktop}")
+    keep_desktop = input(f"Keep existing Virtual Desktop #{current_desktop}? (y/n) [y]: ").strip().lower()
+    if keep_desktop != 'n':
+        print(f" [✓] Preserved Virtual Desktop: #{current_desktop}")
+    else:
+        desktop_input = input(f"Enter new Virtual Desktop number for Roblox AFK [Default 2]: ").strip()
+        if desktop_input.isdigit():
+            config["afk_desktop_index"] = int(desktop_input)
 
     # 3. Stock Tracker Restock Time Calculation
     print("\n------------------------------------------------------")
     print(" [Global Stock Refresh Calibration]")
-    print(" Look at the Discord Stock Tracker bot.")
-    try:
-        mins_left = int(input(" Enter remaining MINUTES until Global Stock Refresh: ").strip())
-        secs_left = int(input(" Enter remaining SECONDS until Global Stock Refresh: ").strip())
-    except ValueError:
-        print("[!] Invalid input. Defaulting to 15m 00s.")
-        mins_left, secs_left = 15, 0
-
+    calibrated_ts = config.get("calibrated_refresh_timestamp", 0)
     now_ts = time.time()
-    refresh_ts = now_ts + (mins_left * 60) + secs_left
-    config["calibrated_refresh_timestamp"] = refresh_ts
+    
+    use_existing_ts = False
+    if calibrated_ts > now_ts:
+        seconds_remaining = calibrated_ts - now_ts
+        mins_r = int(seconds_remaining // 60)
+        secs_r = int(seconds_remaining % 60)
+        refresh_local_str = datetime.datetime.fromtimestamp(calibrated_ts).strftime('%I:%M:%S %p')
+        print(f" Saved Calibration Found: Next Refresh at {refresh_local_str} ({mins_r}m {secs_r}s remaining)")
+        keep_ts = input(" Keep existing calibration from config? (y/n) [y]: ").strip().lower()
+        if keep_ts != 'n':
+            use_existing_ts = True
+            print(f" [✓] Preserved Next Global Stock Refresh: {refresh_local_str}")
 
-    refresh_local_str = datetime.datetime.fromtimestamp(refresh_ts).strftime('%I:%M:%S %p')
-    print(f" [✓] Calibrated! Next Global Stock Refresh at: {refresh_local_str}")
+    if not use_existing_ts:
+        print(" Look at the Discord Stock Tracker bot.")
+        try:
+            mins_left = int(input(" Enter remaining MINUTES until Global Stock Refresh: ").strip())
+            secs_left = int(input(" Enter remaining SECONDS until Global Stock Refresh: ").strip())
+        except ValueError:
+            print("[!] Invalid input. Defaulting to 15m 00s.")
+            mins_left, secs_left = 15, 0
+
+        refresh_ts = now_ts + (mins_left * 60) + secs_left
+        config["calibrated_refresh_timestamp"] = refresh_ts
+        refresh_local_str = datetime.datetime.fromtimestamp(refresh_ts).strftime('%I:%M:%S %p')
+        print(f" [✓] Calibrated! Next Global Stock Refresh at: {refresh_local_str}")
     print("------------------------------------------------------")
 
     # 4. Launch Roblox GPO

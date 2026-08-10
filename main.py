@@ -227,11 +227,7 @@ def run_ps_join_workflow(config):
     print(f"\n[Action] Switching to AFK Virtual Desktop #{afk_desktop}...")
     switch_to_desktop_num(afk_desktop)
 
-    # 1. Pre-flight cleanup
-    force_kill_roblox()
-    time.sleep(1.5)
-
-    # 2. Browserless Launch via roblox://
+    # Launch via roblox://
     print("[Action] Launching Roblox GPO via roblox:// protocol...")
     os.startfile(f"roblox://placeId={place_id}")
     

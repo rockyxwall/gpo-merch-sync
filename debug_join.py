@@ -217,11 +217,8 @@ def run_debug():
     print("\n--- [Step 1] Switch Desktop ---")
     switch_to_desktop_num(afk_desktop)
 
-    # Step 2: Cleanup & Launch
-    print("\n--- [Step 2] Kill Roblox & Launch roblox:// ---")
-    force_kill_roblox()
-    time.sleep(1.5)
-    
+    # Step 2: Launch via roblox://
+    print("\n--- [Step 2] Launch roblox:// ---")
     print(f"  [Action] Launching roblox://placeId={place_id}...")
     os.startfile(f"roblox://placeId={place_id}")
 
