@@ -227,11 +227,11 @@ def run_ps_join_workflow(config):
         
     time.sleep(3.0)  # Wait for splash screen
 
-    # 3. Press Space (or any key) to skip splash screen and enter Main Menu
-    print("[Action] Focusing Roblox & pressing SPACE to enter Main Menu...")
+    # 3. Press 'f' (or any key) to skip splash screen and enter Main Menu
+    print("[Action] Focusing Roblox & pressing 'f' key to enter Main Menu...")
     focus_roblox_window()
     time.sleep(0.3)
-    pydirectinput.press('space')
+    pydirectinput.press('f')
     time.sleep(2.5)  # Wait for main menu UI buttons to appear
 
     # 4. Main Menu PS Button
