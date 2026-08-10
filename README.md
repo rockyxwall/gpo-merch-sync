@@ -113,6 +113,7 @@ gpo-merch-sync/
 ├── config.json          # Local config (Stores PS Code, Virtual Desktop index, coords)
 ├── setup.py             # 1-Click OpenCV ROI bounding-box capture wizard
 ├── main.py              # Core AFK looper script (Admin elevated, pyvda, pydirectinput)
+├── debug_join.py        # Standalone step-by-step join sequence debugger
 ├── requirements.txt     # Dependency list (pydirectinput, pyvda, opencv, pyperclip, keyboard)
 └── assets/              # Template images (ps_box.png, regular_button.png, first_sea.png, server_time.png)
 ```
