@@ -267,11 +267,8 @@ def main():
     print("======================================================")
 
     if not is_admin():
-        print("[!] ERROR: Administrator rights required for DirectInput & Keybind hooks!")
-        print("    Please re-run your terminal as Administrator!")
-        print("    Command: uv run python main.py")
-        input("\nPress ENTER to exit...")
-        sys.exit(1)
+        print("[!] WARNING: Running without Administrator privileges.")
+        print("    For best results with DirectInput & keybind hooks, run in an Administrator terminal!")
 
     if not os.path.exists(CONFIG_PATH):
         print("\n[!] ERROR: config.json not found!")
