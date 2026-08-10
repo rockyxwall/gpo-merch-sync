@@ -34,23 +34,23 @@ def get_mouse_position():
         pos = pydirectinput.position()
         return int(pos[0]), int(pos[1])
 
-def capture_coordinate_fast(step_num, title, coord_key, existing_coords):
+def capture_image_template(step_num, title, template_filename, hint_instruction):
     print(f"\n=======================================================")
-    print(f" [Step {step_num}] {title}")
-    print(f"  1. Switch to/hover mouse over '{title}' in Roblox.")
-    print(f"  2. Press [ F4 ] to record position & capture template image.")
+    print(f" [Step {step_num}/5] Capture '{title}' Image Template")
+    print(f"  Instructions:")
+    print(f"   1. {hint_instruction}")
+    print(f"   2. Hover mouse over the center of '{title}'.")
+    print(f"   3. Press [ F4 ] to capture image template.")
     print(f"=======================================================")
 
-    current_coord = existing_coords.get(coord_key)
-    template_path = os.path.join(ASSETS_DIR, f"{coord_key}.png")
+    template_path = os.path.join(ASSETS_DIR, template_filename)
 
-    if current_coord and isinstance(current_coord, dict) and "x" in current_coord and "y" in current_coord and os.path.exists(template_path):
-        print(f"  Existing coordinate: ({current_coord['x']}, {current_coord['y']})")
-        print(f"  Existing image template: assets/{coord_key}.png")
-        skip = input(f"  Keep existing configuration for '{coord_key}'? (y/n) [y]: ").strip().lower()
+    if os.path.exists(template_path):
+        print(f"  Existing image template found: assets/{template_filename}")
+        skip = input(f"  Keep existing template for '{title}'? (y/n) [y]: ").strip().lower()
         if skip != 'n':
-            print(f"  [✓] Preserved ({current_coord['x']}, {current_coord['y']}) & assets/{coord_key}.png")
-            return current_coord
+            print(f"  [✓] Preserved assets/{template_filename}")
+            return True
 
     while keyboard.is_pressed('f4'):
         time.sleep(0.05)
@@ -60,7 +60,7 @@ def capture_coordinate_fast(step_num, title, coord_key, existing_coords):
         if keyboard.is_pressed('f4'):
             x, y = get_mouse_position()
             
-            # Crop 120x60 ROI around mouse position for OpenCV template matching
+            # Crop 120x60 ROI centered around mouse position for OpenCV template matching
             try:
                 screen = ImageGrab.grab()
                 left = max(0, x - 60)
@@ -71,18 +71,18 @@ def capture_coordinate_fast(step_num, title, coord_key, existing_coords):
                 crop_img = screen.crop((left, top, right, bottom))
                 os.makedirs(ASSETS_DIR, exist_ok=True)
                 crop_img.save(template_path)
-                print(f"  [✓] Saved image recognition template: assets/{coord_key}.png")
+                print(f"  [✓] Successfully captured & saved template: assets/{template_filename}")
             except Exception as e:
-                print(f"  [!] Warning saving template image: {e}")
+                print(f"  [!] Error capturing image template: {e}")
+                return False
 
-            print(f"  [✓] F4 Pressed! Recorded coordinate: ({x}, {y})")
             time.sleep(0.3)
-            return {"x": x, "y": y}
+            return True
         time.sleep(0.05)
 
 def main():
     print("======================================================")
-    print("   GPO Merch Sync - Fast 1-Click Setup Wizard 🏴‍☠️     ")
+    print("   GPO Merch Sync - 100% Vision Setup Wizard 🏴‍☠️    ")
     print("======================================================")
     
     if not is_admin():
@@ -93,17 +93,11 @@ def main():
         "gpo_ps_code": "",
         "roblox_place_id": "1730877806",
         "afk_desktop_index": 2,
-        "confidence": 0.8,
+        "confidence": 0.7,
         "menu_timeout_seconds": 90,
         "merchant_alarm_lead_seconds": 15,
         "afk_timeout_seconds": 300,
-        "calibrated_refresh_timestamp": 0,
-        "coords": {
-            "ps_button": None,
-            "ps_box": None,
-            "regular_button": None,
-            "first_sea_button": None
-        }
+        "calibrated_refresh_timestamp": 0
     }
     
     example_config_path = os.path.join(os.path.dirname(__file__), "config.example.json")
@@ -186,43 +180,63 @@ def main():
         print(f" [✓] Calibrated! Next Global Stock Refresh at: {refresh_local_str}")
     print("------------------------------------------------------")
 
-    # 4. Launch Roblox GPO
+    # 4. Launch Roblox GPO & Guide 5 Image Captures
     place_id = config.get("roblox_place_id", "1730877806")
     print(f"\n[Action] Launching Grand Piece Online (Place ID: {place_id}) via roblox:// protocol...")
     os.startfile(f"roblox://placeId={place_id}")
-    input("\n[!] Press 'F' key in GPO (or any key) to enter Main Menu, then press ENTER in this terminal... ")
+    input("\n[!] Press ENTER once GPO splash screen is visible on your screen... ")
 
-    existing_coords = config.get("coords", {})
+    # Step 1: GPO Logo / Splash Title
+    capture_image_template(
+        1, "GPO Splash Screen Logo", "gpo_logo.png",
+        "Make sure GPO title splash screen is visible."
+    )
 
-    # Step 1: Main Menu PS Button
-    config["coords"]["ps_button"] = capture_coordinate_fast(1, "Main Menu 'Private Server' Button", "ps_button", existing_coords)
+    print("\n[Action] Transitioning to GPO Main Menu...")
+    input("[!] Press 'F' key in GPO to open the Main Menu, then press ENTER in this terminal... ")
+
+    # Step 2: Main Menu PS Button
+    capture_image_template(
+        2, "Main Menu 'Private Server' Button", "ps_button.png",
+        "Make sure the Main Menu is visible on screen."
+    )
 
     input("\n[!] Click 'Private Server' in GPO, then press ENTER once the PS Code Box is visible... ")
 
-    # Step 2: PS Code Input Box
-    config["coords"]["ps_box"] = capture_coordinate_fast(2, "PS Code Text Input Box", "ps_box", existing_coords)
+    # Step 3: PS Code Box
+    capture_image_template(
+        3, "PS Code Text Input Box", "ps_box.png",
+        "Make sure the PS Code input box modal is open on screen."
+    )
 
     ps_code_val = config.get('gpo_ps_code', '')
     print(f"\n[!] Click PS text box, paste code ('{ps_code_val}'), hit ENTER in GPO...")
     input("    Press ENTER once the 'Regular' game mode button is visible on screen... ")
 
-    # Step 3: Regular Button
-    config["coords"]["regular_button"] = capture_coordinate_fast(3, "'Regular' Game Mode Button", "regular_button", existing_coords)
+    # Step 4: Regular Button
+    capture_image_template(
+        4, "'Regular' Game Mode Button", "regular_button.png",
+        "Make sure the Game Mode selection screen is visible."
+    )
 
     input("\n[!] Click 'Regular' in GPO, then press ENTER once 'First Sea' button is visible... ")
 
-    # Step 4: First Sea Button
-    config["coords"]["first_sea_button"] = capture_coordinate_fast(4, "'First Sea' Button", "first_sea_button", existing_coords)
+    # Step 5: First Sea Button
+    capture_image_template(
+        5, "'First Sea' Button", "first_sea_button.png",
+        "Make sure the Sea selection screen is visible."
+    )
 
     # Save config.json
     with open(CONFIG_PATH, "w") as f:
         json.dump(config, f, indent=2)
 
     print("\n======================================================")
-    print(" [✓] Fast Setup Complete!")
+    print(" [✓] 100% Vision Setup Complete!")
     print(f" [✓] Configuration saved to: {CONFIG_PATH}")
-    print(f" [✓] Next Global Stock Refresh: {refresh_local_str}")
-    print(" You can now run GPO Merch Sync using:")
+    print(f" [✓] Image Templates Saved to: {ASSETS_DIR}/")
+    print(" You can now test the looper using:")
+    print("     uv run python debug_join.py")
     print("     uv run python main.py")
     print("======================================================")
 

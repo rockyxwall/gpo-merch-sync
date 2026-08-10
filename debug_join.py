@@ -93,11 +93,9 @@ def focus_roblox_window(maximize=True):
                 hwnd = windows[0]._hWnd
         
         if hwnd:
-            # 3 = SW_MAXIMIZE, 9 = SW_RESTORE
-            cmd = 3 if maximize else 9
+            cmd = 3 if maximize else 9  # 3 = SW_MAXIMIZE, 9 = SW_RESTORE
             ctypes.windll.user32.ShowWindow(hwnd, cmd)
             ctypes.windll.user32.BringWindowToTop(hwnd)
-            # Alt key tap to unlock SetForegroundWindow privilege
             ctypes.windll.user32.keybd_event(0x12, 0, 0, 0)  # Alt down
             ctypes.windll.user32.SetForegroundWindow(hwnd)
             ctypes.windll.user32.keybd_event(0x12, 0, 2, 0)  # Alt up
@@ -134,10 +132,10 @@ def wait_for_roblox_window(timeout=30):
     print("  [!] Roblox window was NOT found within timeout.")
     return False
 
-def find_image_on_screen(image_name, confidence=0.8, timeout=10):
+def find_image_on_screen(image_name, confidence=0.7, timeout=10):
     image_path = os.path.join(ASSETS_DIR, image_name)
     if not os.path.exists(image_path):
-        print(f"  [!] Template missing: {image_path}")
+        print(f"  [Notice] Image template file missing: assets/{image_name}")
         return None
         
     template = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
@@ -173,7 +171,7 @@ def find_image_on_screen(image_name, confidence=0.8, timeout=10):
             
         time.sleep(0.5)
         
-    print(f"  [!] Match timed out for {image_name}")
+    print(f"  [!] Scan timed out for template: assets/{image_name}")
     return None
 
 def enter_ps_code(code):
@@ -205,13 +203,11 @@ def run_debug():
     afk_desktop = config.get("afk_desktop_index", 2)
     ps_code = config.get("gpo_ps_code", "")
     place_id = config.get("roblox_place_id", "1730877806")
-    coords = config.get("coords", {})
 
     print(f"Config Loaded:")
     print(f"  - AFK Desktop: #{afk_desktop}")
     print(f"  - PS Code: '{ps_code}'")
-    print(f"  - Place ID: {place_id}")
-    print(f"  - Coordinates: {coords}\n")
+    print(f"  - Place ID: {place_id}\n")
 
     # Step 1: Switch Desktop
     print("\n--- [Step 1] Switch Desktop ---")
@@ -228,21 +224,27 @@ def run_debug():
     
     if not roblox_ready:
         print("\n[!] CRITICAL: Roblox window failed to launch or be detected.")
-        print("[!] Aborting join sequence to prevent premature background clicks.")
+        print("[!] Aborting join sequence.")
         return
-
-    print("  [System] Waiting 5 seconds for GPO loading screen assets to initialize...")
-    time.sleep(5.0)
 
     if EMERGENCY_STOP:
         return
 
-    # Step 4: Keypress to dismiss splash
-    print("\n--- [Step 4] Keypress to dismiss splash screen ---")
+    # Step 4: Detect GPO Logo & Press 'f'
+    print("\n--- [Step 4] Detect GPO Splash Logo (gpo_logo.png) & Enter Main Menu ---")
     if not focus_roblox_window(maximize=True):
-        print("[!] Roblox window lost before keypress. Aborting.")
+        print("[!] Roblox window lost before GPO logo check. Aborting.")
         return
         
+    print("  [System] Scanning screen with OpenCV for GPO Logo ('gpo_logo.png', timeout 45s)...")
+    logo_pos = find_image_on_screen("gpo_logo.png", confidence=0.7, timeout=45)
+    
+    if logo_pos:
+        print(f"  [✓ Image Recognized] GPO Logo screen detected at {logo_pos}!")
+    else:
+        print("  [Notice] GPO Logo scan completed. Sending keypress...")
+
+    focus_roblox_window(maximize=True)
     print("  [Action] Sending keypress 'f' to enter Main Menu...")
     pydirectinput.press('f')
     time.sleep(3.0)

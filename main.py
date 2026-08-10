@@ -237,17 +237,17 @@ def run_ps_join_workflow(config):
         print("[!] CRITICAL: Roblox window failed to launch or be detected. Aborting join workflow.")
         return False
 
-    print(" [System] Waiting 5 seconds for GPO loading screen assets to initialize...")
-    time.sleep(5.0)
-
-    if EMERGENCY_STOP:
-        return False
-
-    # 3. Press 'f' (or any key) to skip splash screen and enter Main Menu
+    # 3. Detect GPO Splash Logo (gpo_logo.png) & Press 'f' to enter Main Menu
     if not focus_roblox_window(maximize=True):
-        print("[!] Roblox window lost before keypress. Aborting.")
+        print("[!] Roblox window lost before GPO logo check. Aborting.")
         return False
         
+    print("[System] Scanning screen with OpenCV for GPO Logo ('gpo_logo.png', timeout 45s)...")
+    logo_pos = find_image_on_screen("gpo_logo.png", confidence=0.7, timeout=45)
+    if logo_pos:
+        print(f" [✓ Image Recognized] GPO Splash screen detected at {logo_pos}!")
+
+    focus_roblox_window(maximize=True)
     print("[Action] Focusing Roblox & pressing 'f' key to enter Main Menu...")
     pydirectinput.press('f')
     time.sleep(3.0)  # Wait for main menu UI buttons to appear
